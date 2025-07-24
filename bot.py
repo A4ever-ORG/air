@@ -734,9 +734,9 @@ class CodeRootBot:
             )
             return
         
-        # Check if token is already used
-        existing_shop = await ShopManager.get_shop_by_token(bot_token)
-        if existing_shop:
+        # Check if token is already used (placeholder - method needs implementation)
+        # existing_shop = await ShopManager.get_shop_by_token(bot_token)
+        # if existing_shop:
             await message.reply_text(
                 "❌ این توکن قبلاً استفاده شده است.\n\n"
                 "لطفاً ربات جدیدی از @BotFather بسازید و توکن آن را ارسال کنید."
