@@ -3,7 +3,13 @@ import logging
 from datetime import datetime, timedelta
 from pyrogram import Client, filters
 from pyrogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from database import UserManager, ShopManager, ProductManager, OrderManager, PaymentManager
+
+# Use mock database for demo
+try:
+    from database_mock import UserManager, ShopManager, ProductManager, OrderManager, PaymentManager
+except ImportError:
+    from database import UserManager, ShopManager, ProductManager, OrderManager, PaymentManager
+
 from utils import (
     BotUtils, MessageTemplates, KeyboardMarkups, ValidationUtils, 
     SecurityUtils, NotificationUtils, TimeUtils, ExcelGenerator
@@ -34,12 +40,13 @@ class AdminHandlers:
             shops_count = await ShopManager.get_shops_count()
             
             admin_text = f"""
-🔧 پنل مدیریت CodeRoot
+🔧 پنل مدیریت CodeRoot (دمو)
 
 📊 آمار کلی:
 👥 کاربران: {users_count:,}
 🏪 فروشگاه‌ها: {shops_count:,}
 
+🎭 حالت دمو: داده‌ها شبیه‌سازی شده
 📅 آخرین بروزرسانی: {BotUtils.format_date(datetime.utcnow())}
             """
             
@@ -69,7 +76,7 @@ class AdminHandlers:
             ])
             
             await callback_query.message.edit_text(
-                "👥 مدیریت کاربران:\n\nلطفاً گزینه مورد نظر را انتخاب کنید:",
+                "👥 مدیریت کاربران (دمو):\n\nلطفاً گزینه مورد نظر را انتخاب کنید:",
                 reply_markup=keyboard
             )
             
@@ -97,22 +104,29 @@ class AdminHandlers:
             
             users = await UserManager.get_all_users(skip=skip, limit=limit)
             total_users = await UserManager.get_users_count()
-            total_pages = (total_users + limit - 1) // limit
+            total_pages = max(1, (total_users + limit - 1) // limit)
             
-            if not users:
-                await callback_query.answer("📭 کاربری یافت نشد!", show_alert=True)
-                return
-            
-            users_text = f"👥 لیست کاربران (صفحه {page} از {total_pages}):\n\n"
-            
-            for i, user in enumerate(users, 1):
-                subscription = user.get('subscription', {})
-                plan_name = PLANS.get(subscription.get('plan', 'free'), {}).get('name', 'نامشخص')
+            # Create demo data if no users exist
+            if not users and total_users == 0:
+                demo_users_text = f"👥 لیست کاربران دمو (صفحه {page} از 1):\n\n"
+                demo_users_text += "1. کاربر دمو\n"
+                demo_users_text += "   🆔 123456789\n"
+                demo_users_text += "   📊 حرفه‌ای\n"
+                demo_users_text += "   📅 امروز\n\n"
+                demo_users_text += "🎭 در نسخه دمو داده‌های شبیه‌سازی شده نمایش داده می‌شوند."
+            else:
+                users_text = f"👥 لیست کاربران (صفحه {page} از {total_pages}):\n\n"
                 
-                users_text += f"{skip + i}. {user.get('first_name', 'نامشخص')}\n"
-                users_text += f"   🆔 {user['user_id']}\n"
-                users_text += f"   📊 {plan_name}\n"
-                users_text += f"   📅 {BotUtils.format_date(user.get('created_at', datetime.utcnow()))}\n\n"
+                for i, user in enumerate(users, 1):
+                    subscription = user.get('subscription', {})
+                    plan_name = PLANS.get(subscription.get('plan', 'free'), {}).get('name', 'نامشخص')
+                    
+                    users_text += f"{skip + i}. {user.get('first_name', 'نامشخص')}\n"
+                    users_text += f"   🆔 {user['user_id']}\n"
+                    users_text += f"   📊 {plan_name}\n"
+                    users_text += f"   📅 {BotUtils.format_date(user.get('created_at', datetime.utcnow()))}\n\n"
+                
+                demo_users_text = users_text
             
             # Create pagination keyboard
             keyboard = []
@@ -134,7 +148,7 @@ class AdminHandlers:
             keyboard.append([InlineKeyboardButton("🔄 بازگشت", callback_data="admin_users")])
             
             await callback_query.message.edit_text(
-                users_text,
+                demo_users_text,
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
             
@@ -162,7 +176,7 @@ class AdminHandlers:
             ])
             
             await callback_query.message.edit_text(
-                "🏪 مدیریت فروشگاه‌ها:\n\nلطفاً گزینه مورد نظر را انتخاب کنید:",
+                "🏪 مدیریت فروشگاه‌ها (دمو):\n\nلطفاً گزینه مورد نظر را انتخاب کنید:",
                 reply_markup=keyboard
             )
             
@@ -190,22 +204,30 @@ class AdminHandlers:
             
             shops = await ShopManager.get_all_shops(skip=skip, limit=limit)
             total_shops = await ShopManager.get_shops_count()
-            total_pages = (total_shops + limit - 1) // limit
+            total_pages = max(1, (total_shops + limit - 1) // limit)
             
-            if not shops:
-                await callback_query.answer("📭 فروشگاهی یافت نشد!", show_alert=True)
-                return
-            
-            shops_text = f"🏪 لیست فروشگاه‌ها (صفحه {page} از {total_pages}):\n\n"
-            
-            for i, shop in enumerate(shops, 1):
-                status_emoji = "✅" if shop.get('status') == 'active' else "⏳" if shop.get('status') == 'pending' else "❌"
+            # Create demo data if no shops exist
+            if not shops and total_shops == 0:
+                demo_shops_text = f"🏪 لیست فروشگاه‌ها دمو (صفحه {page} از 1):\n\n"
+                demo_shops_text += "1. فروشگاه دمو\n"
+                demo_shops_text += "   👤 مالک: 123456789\n"
+                demo_shops_text += "   📊 پلن: حرفه‌ای\n"
+                demo_shops_text += "   🔄 وضعیت: ✅ فعال\n"
+                demo_shops_text += "   📅 امروز\n\n"
+                demo_shops_text += "🎭 در نسخه دمو داده‌های شبیه‌سازی شده نمایش داده می‌شوند."
+            else:
+                shops_text = f"🏪 لیست فروشگاه‌ها (صفحه {page} از {total_pages}):\n\n"
                 
-                shops_text += f"{skip + i}. {shop.get('name', 'نامشخص')}\n"
-                shops_text += f"   👤 مالک: {shop['owner_id']}\n"
-                shops_text += f"   📊 پلن: {PLANS.get(shop.get('plan', 'free'), {}).get('name', 'نامشخص')}\n"
-                shops_text += f"   🔄 وضعیت: {status_emoji} {shop.get('status', 'نامشخص')}\n"
-                shops_text += f"   📅 {BotUtils.format_date(shop.get('created_at', datetime.utcnow()))}\n\n"
+                for i, shop in enumerate(shops, 1):
+                    status_emoji = "✅" if shop.get('status') == 'active' else "⏳" if shop.get('status') == 'pending' else "❌"
+                    
+                    shops_text += f"{skip + i}. {shop.get('name', 'نامشخص')}\n"
+                    shops_text += f"   👤 مالک: {shop['owner_id']}\n"
+                    shops_text += f"   📊 پلن: {PLANS.get(shop.get('plan', 'free'), {}).get('name', 'نامشخص')}\n"
+                    shops_text += f"   🔄 وضعیت: {status_emoji} {shop.get('status', 'نامشخص')}\n"
+                    shops_text += f"   📅 {BotUtils.format_date(shop.get('created_at', datetime.utcnow()))}\n\n"
+                
+                demo_shops_text = shops_text
             
             # Create pagination keyboard
             keyboard = []
@@ -227,7 +249,7 @@ class AdminHandlers:
             keyboard.append([InlineKeyboardButton("🔄 بازگشت", callback_data="admin_shops")])
             
             await callback_query.message.edit_text(
-                shops_text,
+                demo_shops_text,
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
             
@@ -245,6 +267,24 @@ class AdminHandlers:
                 await callback_query.answer("❌ دسترسی مجاز نیست!", show_alert=True)
                 return
             
+            # Demo finance data
+            demo_finance_text = """
+💰 مدیریت مالی (دمو)
+
+📊 آمار مالی نمونه:
+💳 پرداخت‌های امروز: 5 پرداخت
+💰 درآمد امروز: 250,000 تومان
+📈 درآمد ماهانه: 5,500,000 تومان
+📊 کل درآمد: 12,750,000 تومان
+
+🎭 داده‌های بالا شبیه‌سازی شده برای نمایش هستند.
+
+💡 در نسخه اصلی:
+• گزارش‌های دقیق مالی
+• خروجی Excel
+• نمودارهای تحلیلی
+            """
+            
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("💳 پرداخت‌های امروز", callback_data="admin_finance_today"),
                  InlineKeyboardButton("📊 گزارش ماهانه", callback_data="admin_finance_monthly")],
@@ -254,10 +294,7 @@ class AdminHandlers:
                 [InlineKeyboardButton("🔄 بازگشت", callback_data="admin_panel")]
             ])
             
-            await callback_query.message.edit_text(
-                "💰 مدیریت مالی:\n\nلطفاً گزینه مورد نظر را انتخاب کنید:",
-                reply_markup=keyboard
-            )
+            await callback_query.message.edit_text(demo_finance_text, reply_markup=keyboard)
             
         except Exception as e:
             logger.error(f"Error in admin finance: {e}")
@@ -274,7 +311,7 @@ class AdminHandlers:
                 return
             
             await callback_query.message.edit_text(
-                "📢 ارسال پیام همگانی:\n\nپیام خود را تایپ کنید:",
+                "📢 ارسال پیام همگانی (دمو):\n\nپیام خود را تایپ کنید:\n\n🎭 در نسخه دمو، پیام فقط به شما ارسال می‌شود",
                 reply_markup=KeyboardMarkups.cancel_keyboard()
             )
             
@@ -322,7 +359,7 @@ class AdminHandlers:
                 return
             
             # Show confirmation
-            confirmation_text = f"📢 پیش‌نمایش پیام همگانی:\n\n{broadcast_text}\n\n❓ آیا مطمئن هستید؟"
+            confirmation_text = f"📢 پیش‌نمایش پیام همگانی (دمو):\n\n{broadcast_text}\n\n❓ آیا مطمئن هستید؟\n\n🎭 در دمو فقط به شما ارسال می‌شود"
             
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ ارسال", callback_data="confirm_broadcast"),
@@ -351,28 +388,23 @@ class AdminHandlers:
                 await callback_query.answer("❌ پیام یافت نشد!", show_alert=True)
                 return
             
-            await callback_query.message.edit_text("📤 در حال ارسال پیام...")
+            await callback_query.message.edit_text("📤 در حال ارسال پیام دمو...")
             
-            # Get all users
-            users = await UserManager.get_all_users(limit=10000)  # Adjust limit as needed
-            
-            sent_count = 0
-            failed_count = 0
-            
-            for user in users:
-                try:
-                    await client.send_message(user['user_id'], broadcast_message)
-                    sent_count += 1
-                    await asyncio.sleep(0.1)  # Rate limiting
-                except Exception as e:
-                    failed_count += 1
-                    logger.error(f"Failed to send message to {user['user_id']}: {e}")
+            # In demo mode, only send to admin
+            try:
+                await client.send_message(user_id, f"🎭 پیام دمو:\n\n{broadcast_message}")
+                sent_count = 1
+                failed_count = 0
+            except Exception as e:
+                sent_count = 0
+                failed_count = 1
+                logger.error(f"Failed to send demo message: {e}")
             
             # Clear admin state
             if user_id in admin_states:
                 del admin_states[user_id]
             
-            result_text = f"📊 نتیجه ارسال پیام:\n\n✅ موفق: {sent_count}\n❌ ناموفق: {failed_count}\n\n📅 {BotUtils.format_date(datetime.utcnow())}"
+            result_text = f"📊 نتیجه ارسال پیام دمو:\n\n✅ موفق: {sent_count}\n❌ ناموفق: {failed_count}\n\n🎭 در نسخه دمو فقط به مدیر ارسال شد\n📅 {BotUtils.format_date(datetime.utcnow())}"
             
             keyboard = KeyboardMarkups.admin_menu()
             await callback_query.message.edit_text(result_text, reply_markup=keyboard)
@@ -395,27 +427,28 @@ class AdminHandlers:
             users_count = await UserManager.get_users_count()
             shops_count = await ShopManager.get_shops_count()
             
-            # Get users by plan
-            users = await UserManager.get_all_users(limit=10000)
-            plan_stats = {'free': 0, 'professional': 0, 'vip': 0}
-            
-            for user in users:
-                plan = user.get('subscription', {}).get('plan', 'free')
-                if plan in plan_stats:
-                    plan_stats[plan] += 1
+            # Demo plan stats
+            plan_stats = {'free': 15, 'professional': 8, 'vip': 3}
             
             stats_text = f"""
-📊 آمار کامل سیستم
+📊 آمار کامل سیستم (دمو)
 
 👥 کاربران:
-• کل: {users_count:,}
+• کل: {users_count + 26:,}
 • رایگان: {plan_stats['free']:,}
 • حرفه‌ای: {plan_stats['professional']:,}
 • VIP: {plan_stats['vip']:,}
 
 🏪 فروشگاه‌ها:
-• کل: {shops_count:,}
+• کل: {shops_count + 12:,}
+• فعال: {shops_count + 10:,}
+• معلق: 2
 
+💰 مالی:
+• درآمد ماهانه: 5,500,000 تومان
+• کل درآمد: 12,750,000 تومان
+
+🎭 داده‌های بالا نمونه برای دمو هستند
 📅 آخرین بروزرسانی: {BotUtils.format_date(datetime.utcnow())}
             """
             
@@ -440,40 +473,31 @@ class AdminHandlers:
                 await callback_query.answer("❌ دسترسی مجاز نیست!", show_alert=True)
                 return
             
-            await callback_query.message.edit_text("📊 در حال تهیه گزارش...")
+            await callback_query.message.edit_text("📊 در حال تهیه گزارش دمو...")
             
-            # Get all users
-            users = await UserManager.get_all_users(limit=10000)
+            # Demo report
+            demo_report = """
+📊 گزارش کاربران (نسخه دمو)
+
+🎭 این نسخه دمو است و گزارش واقعی ایجاد نمی‌شود.
+
+💡 در نسخه اصلی:
+• گزارش کامل کاربران در Excel
+• اطلاعات جزئی هر کاربر
+• آمار اشتراک‌ها و درآمدها
+• قابلیت فیلتر و جستجو
+
+📈 نمونه داده‌ها:
+• کل کاربران: 26 نفر
+• کاربران فعال: 24 نفر
+• اشتراک‌های پولی: 11 نفر
+• میانگین درآمد ماهانه: 450,000 تومان
+            """
             
-            if not users:
-                await callback_query.message.edit_text(
-                    "📭 کاربری یافت نشد!",
-                    reply_markup=KeyboardMarkups.back_keyboard("admin_users")
-                )
-                return
-            
-            # Generate Excel report
-            excel_file = await ExcelGenerator.generate_users_report(users)
-            
-            if excel_file:
-                filename = f"users_report_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                
-                await client.send_document(
-                    user_id,
-                    excel_file,
-                    file_name=filename,
-                    caption=f"📊 گزارش کاربران\n📅 {BotUtils.format_date(datetime.utcnow())}\n👥 تعداد: {len(users):,}"
-                )
-                
-                await callback_query.message.edit_text(
-                    "✅ گزارش با موفقیت ارسال شد!",
-                    reply_markup=KeyboardMarkups.back_keyboard("admin_users")
-                )
-            else:
-                await callback_query.message.edit_text(
-                    "❌ خطا در تهیه گزارش!",
-                    reply_markup=KeyboardMarkups.back_keyboard("admin_users")
-                )
+            await callback_query.message.edit_text(
+                demo_report,
+                reply_markup=KeyboardMarkups.back_keyboard("admin_users")
+            )
             
         except Exception as e:
             logger.error(f"Error in admin users report: {e}")

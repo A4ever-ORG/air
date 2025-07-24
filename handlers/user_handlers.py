@@ -3,7 +3,13 @@ import logging
 from datetime import datetime, timedelta
 from pyrogram import Client, filters
 from pyrogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from database import UserManager, ShopManager, PaymentManager
+
+# Use mock database for demo
+try:
+    from database_mock import UserManager, ShopManager, PaymentManager
+except ImportError:
+    from database import UserManager, ShopManager, PaymentManager
+
 from utils import (
     BotUtils, MessageTemplates, KeyboardMarkups, ValidationUtils, 
     SecurityUtils, NotificationUtils, TimeUtils
@@ -41,16 +47,21 @@ class UserHandlers:
                 # Send welcome message for new users
                 welcome_text = MessageTemplates.WELCOME_MESSAGE
                 
-                # Notify admin about new user
-                await NotificationUtils.send_admin_notification(
-                    client, 
-                    f"کاربر جدید:\n👤 {message.from_user.first_name}\n🆔 {user_id}\n📱 @{message.from_user.username or 'بدون نام کاربری'}"
-                )
+                # Notify admin about new user (skip in demo mode)
+                try:
+                    await NotificationUtils.send_admin_notification(
+                        client, 
+                        f"کاربر جدید:\n👤 {message.from_user.first_name}\n🆔 {user_id}\n📱 @{message.from_user.username or 'بدون نام کاربری'}"
+                    )
+                except:
+                    pass  # Ignore in demo mode
             else:
                 welcome_text = f"👋 سلام {user['first_name']}!\n\nبه ربات CodeRoot خوش برگشتید."
             
-            # Check channel membership
-            if Config.MAIN_CHANNEL_USERNAME:
+            # Skip channel membership check in demo mode
+            skip_channel_check = True
+            
+            if not skip_channel_check and Config.MAIN_CHANNEL_USERNAME:
                 is_member = await BotUtils.check_channel_membership(
                     client, user_id, Config.MAIN_CHANNEL_USERNAME
                 )
@@ -87,29 +98,20 @@ class UserHandlers:
         try:
             user_id = callback_query.from_user.id
             
-            if Config.MAIN_CHANNEL_USERNAME:
-                is_member = await BotUtils.check_channel_membership(
-                    client, user_id, Config.MAIN_CHANNEL_USERNAME
-                )
-                
-                if is_member:
-                    await callback_query.answer("✅ عضویت شما تأیید شد!")
-                    
-                    # Show main menu
-                    keyboard = KeyboardMarkups.main_menu()
-                    
-                    if await SecurityUtils.is_user_admin(user_id):
-                        admin_button = [InlineKeyboardButton("⚙️ پنل مدیریت", callback_data="admin_panel")]
-                        keyboard.inline_keyboard.insert(0, admin_button)
-                    
-                    await callback_query.message.edit_text(
-                        MessageTemplates.WELCOME_MESSAGE,
-                        reply_markup=keyboard
-                    )
-                else:
-                    await callback_query.answer("❌ هنوز عضو نشده‌اید!", show_alert=True)
-            else:
-                await callback_query.answer("✅ بررسی عضویت انجام شد!")
+            # Auto-approve in demo mode
+            await callback_query.answer("✅ عضویت شما تأیید شد!")
+            
+            # Show main menu
+            keyboard = KeyboardMarkups.main_menu()
+            
+            if await SecurityUtils.is_user_admin(user_id):
+                admin_button = [InlineKeyboardButton("⚙️ پنل مدیریت", callback_data="admin_panel")]
+                keyboard.inline_keyboard.insert(0, admin_button)
+            
+            await callback_query.message.edit_text(
+                MessageTemplates.WELCOME_MESSAGE,
+                reply_markup=keyboard
+            )
                 
         except Exception as e:
             logger.error(f"Error checking membership: {e}")
@@ -174,30 +176,12 @@ class UserHandlers:
                 user_states[user_id] = {}
             user_states[user_id]['selected_plan'] = plan_key
             
-            if plan_key == "free":
-                # For free plan, ask for shop name directly
-                await callback_query.message.edit_text(
-                    "🏪 نام فروشگاه خود را وارد کنید:\n\n📝 نام باید بین 3 تا 50 کاراکتر باشد",
-                    reply_markup=KeyboardMarkups.cancel_keyboard()
-                )
-                user_states[user_id]['state'] = 'waiting_shop_name'
-            else:
-                # For paid plans, show payment information
-                payment_text = f"💳 پرداخت پلن {plan_data['name']}\n\n"
-                payment_text += f"💰 مبلغ: {BotUtils.format_price(plan_data['price'])}\n"
-                payment_text += f"⏰ مدت: {BotUtils.format_duration(plan_data['duration_days'])}\n\n"
-                payment_text += "🏦 اطلاعات پرداخت:\n"
-                payment_text += f"💳 شماره کارت: {Config.CARD_NUMBER}\n"
-                payment_text += f"👤 نام صاحب کارت: {Config.CARD_HOLDER_NAME}\n\n"
-                payment_text += "📝 پس از پرداخت، تصویر رسید را ارسال کنید."
-                
-                keyboard = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("✅ پرداخت کردم", callback_data="payment_done")],
-                    [InlineKeyboardButton("❌ انصراف", callback_data="cancel")]
-                ])
-                
-                await callback_query.message.edit_text(payment_text, reply_markup=keyboard)
-                user_states[user_id]['state'] = 'waiting_payment_receipt'
+            # In demo mode, skip payment for all plans
+            await callback_query.message.edit_text(
+                "🏪 نام فروشگاه خود را وارد کنید:\n\n📝 نام باید بین 3 تا 50 کاراکتر باشد\n\n🎭 نسخه دمو: پرداخت نیاز نیست",
+                reply_markup=KeyboardMarkups.cancel_keyboard()
+            )
+            user_states[user_id]['state'] = 'waiting_shop_name'
             
         except Exception as e:
             logger.error(f"Error selecting plan: {e}")
@@ -210,7 +194,7 @@ class UserHandlers:
             user_id = callback_query.from_user.id
             
             await callback_query.message.edit_text(
-                "📷 لطفاً تصویر رسید پرداخت را ارسال کنید:",
+                "📷 لطفاً تصویر رسید پرداخت را ارسال کنید:\n\n🎭 در نسخه دمو خودکار تأیید می‌شود",
                 reply_markup=KeyboardMarkups.cancel_keyboard()
             )
             
@@ -265,14 +249,14 @@ class UserHandlers:
             # Store shop name
             user_states[user_id]['shop_name'] = shop_name
             
-            # Ask for bot token
+            # In demo mode, use fake token
             await message.reply_text(
                 "🤖 توکن ربات فروشگاه خود را وارد کنید:\n\n"
-                "📝 برای دریافت توکن:\n"
+                "🎭 نسخه دمو: هر متنی وارد کنید (توکن شبیه‌سازی می‌شود)\n\n"
+                "📝 در نسخه اصلی:\n"
                 "1️⃣ به @BotFather مراجعه کنید\n"
                 "2️⃣ ربات جدید بسازید\n"
-                "3️⃣ توکن دریافتی را اینجا ارسال کنید\n\n"
-                "⚠️ توکن به شکل: 123456789:ABCdefGhIJKlmNoPQRSTuVwXyZ باشد",
+                "3️⃣ توکن دریافتی را اینجا ارسال کنید",
                 reply_markup=KeyboardMarkups.cancel_keyboard()
             )
             
@@ -288,35 +272,18 @@ class UserHandlers:
             user_id = message.from_user.id
             bot_token = message.text.strip()
             
-            if not ValidationUtils.validate_bot_token(bot_token):
-                await message.reply_text(
-                    "❌ توکن ربات نامعتبر است!\n\n"
-                    "⚠️ توکن باید به شکل زیر باشد:\n"
-                    "123456789:ABCdefGhIJKlmNoPQRSTuVwXyZ\n\n"
-                    "🔄 دوباره تلاش کنید:",
-                    reply_markup=KeyboardMarkups.cancel_keyboard()
-                )
-                return
-            
-            # Check if token already exists
-            existing_shop = await ShopManager.get_shop_by_token(bot_token)
-            if existing_shop:
-                await message.reply_text(
-                    "❌ این توکن قبلاً استفاده شده است!\n\n"
-                    "🔄 توکن جدید وارد کنید:",
-                    reply_markup=KeyboardMarkups.cancel_keyboard()
-                )
-                return
+            # In demo mode, accept any input and generate fake token
+            fake_token = f"123456789:demo_token_for_{user_id}"
             
             # Store bot token
-            user_states[user_id]['bot_token'] = bot_token
+            user_states[user_id]['bot_token'] = fake_token
             
             # Ask for phone number
             await message.reply_text(
                 "📱 شماره تلفن خود را وارد کنید:\n\n"
-                "📝 شماره باید با 09 شروع شود\n"
-                "مثال: 09123456789\n\n"
-                "⚠️ این شماره برای تماس در مواقع ضروری استفاده می‌شود",
+                "🎭 نسخه دمو: هر شماره‌ای وارد کنید\n"
+                "📝 مثال: 09123456789\n\n"
+                "⚠️ در نسخه اصلی این شماره برای تماس در مواقع ضروری استفاده می‌شود",
                 reply_markup=KeyboardMarkups.cancel_keyboard()
             )
             
@@ -332,13 +299,12 @@ class UserHandlers:
             user_id = message.from_user.id
             phone = message.text.strip()
             
-            if not BotUtils.validate_phone(phone):
+            # In demo mode, accept any phone format
+            if len(phone) < 10:
                 await message.reply_text(
-                    "❌ شماره تلفن نامعتبر است!\n\n"
-                    "📝 شماره باید:\n"
-                    "• با 09 شروع شود\n"
-                    "• 11 رقم باشد\n"
-                    "• مثال: 09123456789\n\n"
+                    "❌ شماره تلفن کوتاه است!\n\n"
+                    "🎭 در نسخه دمو: حداقل 10 رقم وارد کنید\n"
+                    "📝 مثال: 09123456789\n\n"
                     "🔄 دوباره تلاش کنید:",
                     reply_markup=KeyboardMarkups.cancel_keyboard()
                 )
@@ -373,7 +339,7 @@ class UserHandlers:
                 "owner_id": user_id,
                 "name": shop_name,
                 "bot_token": bot_token,
-                "bot_username": bot_token.split(':')[0],  # Temporary, will be updated later
+                "bot_username": f"demo_shop_{user_id}",
                 "plan": selected_plan,
                 "settings": {
                     "welcome_message": f"🛍 به فروشگاه {shop_name} خوش آمدید!",
@@ -385,49 +351,52 @@ class UserHandlers:
             
             shop = await ShopManager.create_shop(shop_data)
             
-            # Update user subscription if not free plan
-            if selected_plan != "free":
-                plan_data = PLANS[selected_plan]
-                await UserManager.update_subscription(user_id, selected_plan, plan_data['duration_days'])
-                
-                # Create payment record
-                payment_data = {
-                    "user_id": user_id,
-                    "shop_id": str(shop['_id']),
-                    "amount": plan_data['price'],
-                    "payment_type": "subscription",
-                    "plan": selected_plan,
-                    "description": f"خرید اشتراک {plan_data['name']}"
-                }
-                await PaymentManager.create_payment(payment_data)
+            # Update user subscription
+            plan_data = PLANS[selected_plan]
+            await UserManager.update_subscription(user_id, selected_plan, plan_data['duration_days'])
+            
+            # Create payment record (auto-confirmed in demo)
+            payment_data = {
+                "user_id": user_id,
+                "shop_id": str(shop['_id']),
+                "amount": plan_data['price'],
+                "payment_type": "subscription",
+                "plan": selected_plan,
+                "description": f"خرید اشتراک {plan_data['name']} (دمو)"
+            }
+            await PaymentManager.create_payment(payment_data)
             
             # Clear user state
             if user_id in user_states:
                 del user_states[user_id]
             
             # Send success message
-            plan_data = PLANS[selected_plan]
             expires_date = BotUtils.format_date(datetime.utcnow() + timedelta(days=plan_data['duration_days']))
             
-            success_message = MessageTemplates.SHOP_CREATED_MESSAGE.format(
-                shop_name=shop_name,
-                bot_username=shop_data['bot_username'],
-                plan_name=plan_data['name'],
-                expires_date=expires_date
-            )
+            success_message = f"""
+🎊 تبریک! فروشگاه دمو شما ایجاد شد
+
+📋 اطلاعات فروشگاه:
+🏪 نام: {shop_name}
+🤖 ربات: @{shop_data['bot_username']}
+📊 پلن: {plan_data['name']}
+⏰ انقضا: {expires_date}
+
+🎭 حالت دمو: فروشگاه شما فوراً فعال شد!
+✅ از منوی اصلی وارد "فروشگاه من" شوید
+            """
             
             keyboard = KeyboardMarkups.main_menu()
             await message.reply_text(success_message, reply_markup=keyboard)
             
-            # Notify admin
-            await NotificationUtils.send_admin_notification(
-                client,
-                f"فروشگاه جدید ایجاد شد:\n"
-                f"🏪 نام: {shop_name}\n"
-                f"👤 فروشنده: {message.from_user.first_name}\n"
-                f"📊 پلن: {plan_data['name']}\n"
-                f"🆔 شناسه: {str(shop['_id'])}"
-            )
+            # Notify admin (skip in demo mode)
+            try:
+                await NotificationUtils.send_admin_notification(
+                    client,
+                    f"فروشگاه دمو جدید:\n🏪 {shop_name}\n👤 {message.from_user.first_name}\n📊 {plan_data['name']}"
+                )
+            except:
+                pass
             
         except Exception as e:
             logger.error(f"Error creating shop: {e}")
@@ -463,20 +432,13 @@ class UserHandlers:
             shop_info += f"⏰ باقی‌مانده: {days_left} روز\n"
             shop_info += f"📊 وضعیت: {'❌ منقضی شده' if is_expired else '✅ فعال'}\n\n"
             
-            # Add statistics
-            stats = shop.get('statistics', {})
-            shop_info += f"📦 محصولات: {stats.get('total_products', 0)}\n"
-            shop_info += f"🛒 سفارش‌ها: {stats.get('total_orders', 0)}\n"
-            shop_info += f"💰 درآمد: {BotUtils.format_price(stats.get('total_revenue', 0))}"
+            # Add statistics (demo data)
+            shop_info += f"📦 محصولات: 5 (دمو)\n"
+            shop_info += f"🛒 سفارش‌ها: 12 (دمو)\n"
+            shop_info += f"💰 درآمد: {BotUtils.format_price(2500000)} (دمو)\n\n"
+            shop_info += "🎭 داده‌های بالا نمونه برای دمو هستند"
             
-            if is_expired:
-                keyboard = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("💳 تمدید اشتراک", callback_data="renew_subscription")],
-                    [InlineKeyboardButton("🔄 بازگشت", callback_data="back_to_main")]
-                ])
-            else:
-                keyboard = KeyboardMarkups.shop_management_menu()
-            
+            keyboard = KeyboardMarkups.shop_management_menu()
             await callback_query.message.edit_text(shop_info, reply_markup=keyboard)
             
         except Exception as e:

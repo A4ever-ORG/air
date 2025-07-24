@@ -1,0 +1,19 @@
+{
+  "platform": "docker",
+  "port": 8000,
+  "app": "coderoot-demo",
+  "image": "coderoot-demo:latest",
+  "build": {
+    "location": ".",
+    "dockerfile": "Dockerfile.liara"
+  },
+  "healthCheck": {
+    "path": "/health",
+    "interval": 30
+  },
+  "environments": {
+    "PYTHONPATH": "/app",
+    "PYTHONUNBUFFERED": "1",
+    "DEMO_MODE": "true"
+  }
+}
