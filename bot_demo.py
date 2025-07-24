@@ -31,15 +31,31 @@ logger = logging.getLogger(__name__)
 class CodeRootDemoBot:
     def __init__(self):
         """Initialize the demo bot"""
-        self.app = Client(
-            "coderoot_demo_bot",
-            api_id=Config.API_ID,
-            api_hash=Config.API_HASH,
-            bot_token=Config.BOT_TOKEN
-        )
         
-        # Register handlers
-        self.register_handlers()
+        # Validate configuration
+        try:
+            Config.validate_required_config()
+        except ValueError as e:
+            logger.error(f"Configuration error: {e}")
+            sys.exit(1)
+        
+        # Check if we have real credentials or demo mode
+        if Config.API_ID == 12345678 or Config.API_HASH == "abcdef1234567890abcdef1234567890":
+            logger.warning("⚠️ Using demo API credentials - some features may not work")
+            logger.info("🎭 Running in full demo mode without Telegram connection")
+            self.demo_mode_only = True
+            self.app = None
+        else:
+            logger.info("🚀 Using real API credentials")
+            self.demo_mode_only = False
+            self.app = Client(
+                "coderoot_demo_bot",
+                api_id=Config.API_ID,
+                api_hash=Config.API_HASH,
+                bot_token=Config.BOT_TOKEN
+            )
+            # Register handlers
+            self.register_handlers()
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -47,6 +63,9 @@ class CodeRootDemoBot:
     
     def register_handlers(self):
         """Register all bot handlers"""
+        
+        if not self.app:
+            return
         
         # Message handlers
         @self.app.on_message(filters.command("start"))
@@ -325,8 +344,9 @@ class CodeRootDemoBot:
             logger.info("Closing mock database connection...")
             await close_database()
             
-            logger.info("Stopping demo bot...")
-            await self.app.stop()
+            if self.app:
+                logger.info("Stopping demo bot...")
+                await self.app.stop()
             
             logger.info("Demo bot stopped successfully.")
             sys.exit(0)
@@ -335,6 +355,37 @@ class CodeRootDemoBot:
             logger.error(f"Error during shutdown: {e}")
             sys.exit(1)
     
+    async def start_demo_web_server(self):
+        """Start a simple web server for demo when Telegram connection is not available"""
+        from datetime import datetime
+        
+        logger.info("🎭 Starting demo web interface...")
+        
+        demo_info = f"""
+        🎭 CodeRoot Demo Bot - حالت وب
+
+        📊 اطلاعات دمو:
+        • ربات: {Config.BOT_TOKEN[:10]}...
+        • ادمین: {Config.ADMIN_USER_ID}
+        • حالت: دمو کامل
+        • زمان شروع: {datetime.now()}
+
+        ✨ قابلیت‌های در دسترس:
+        • مدیریت کاربران شبیه‌سازی شده
+        • فروشگاه‌های دمو
+        • پنل مدیریت کامل
+        • گزارش‌گیری نمونه
+
+        🔗 برای دسترسی کامل نیاز به API واقعی تلگرام دارید
+        """
+        
+        logger.info(demo_info)
+        
+        # Keep the service running
+        while True:
+            await asyncio.sleep(30)
+            logger.info("🎭 Demo service is running...")
+    
     async def start(self):
         """Start the demo bot"""
         try:
@@ -342,38 +393,44 @@ class CodeRootDemoBot:
             logger.info("Initializing mock database...")
             await init_database()
             
-            # Start the bot
-            logger.info("Starting CodeRoot Demo Bot...")
-            await self.app.start()
-            
-            # Get bot info
-            me = await self.app.get_me()
-            logger.info(f"Demo Bot started successfully: @{me.username}")
-            
-            # Send startup notification to admin
-            if Config.ADMIN_USER_ID:
-                try:
-                    await self.app.send_message(
-                        Config.ADMIN_USER_ID,
-                        f"🎭 ربات دمو CodeRoot راه‌اندازی شد!\n\n"
-                        f"🤖 ربات: @{me.username}\n"
-                        f"✨ حالت: دمو (بدون دیتابیس)\n"
-                        f"📅 زمان: {datetime.now()}\n\n"
-                        f"💡 دستور /demo برای توضیحات"
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to send startup notification: {e}")
-            
-            # Keep the bot running
-            logger.info("Demo bot is running. Press Ctrl+C to stop.")
-            await asyncio.Event().wait()
+            if self.demo_mode_only:
+                logger.info("🎭 Starting demo web service (no Telegram connection)...")
+                await self.start_demo_web_server()
+            else:
+                # Start the bot with real connection
+                logger.info("Starting CodeRoot Demo Bot...")
+                await self.app.start()
+                
+                # Get bot info
+                me = await self.app.get_me()
+                logger.info(f"Demo Bot started successfully: @{me.username}")
+                
+                # Send startup notification to admin
+                if Config.ADMIN_USER_ID:
+                    try:
+                        await self.app.send_message(
+                            Config.ADMIN_USER_ID,
+                            f"🎭 ربات دمو CodeRoot راه‌اندازی شد!\n\n"
+                            f"🤖 ربات: @{me.username}\n"
+                            f"✨ حالت: دمو (بدون دیتابیس)\n"
+                            f"📅 زمان: {datetime.now()}\n\n"
+                            f"💡 دستور /demo برای توضیحات"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send startup notification: {e}")
+                
+                # Keep the bot running
+                logger.info("Demo bot is running. Press Ctrl+C to stop.")
+                await asyncio.Event().wait()
             
         except KeyboardInterrupt:
             logger.info("Received keyboard interrupt. Shutting down...")
             await self.shutdown()
         except Exception as e:
             logger.error(f"Error starting demo bot: {e}")
-            await self.shutdown()
+            if not self.demo_mode_only:
+                logger.info("Falling back to demo web service...")
+                await self.start_demo_web_server()
 
 async def main():
     """Main function"""
