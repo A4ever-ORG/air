@@ -15,895 +15,685 @@ Features:
 
 import asyncio
 import logging
-import sys
-import signal
 import os
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import datetime
+from pyrogram import Client, filters
+from pyrogram.types import Message, CallbackQuery, InlineKeyboardMarkup
 
-from pyrogram import Client, filters, enums
-from pyrogram.types import (
-    Message, CallbackQuery, InlineKeyboardMarkup, 
-    InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
-)
-
-# Import local modules
-from config import Config, PLANS, FEATURES, NOTIFICATION_TEMPLATES
-from database import (
-    init_database, close_database, UserManager, ShopManager, 
-    ProductManager, OrderManager, PaymentManager, AnalyticsManager
-)
-from utils.keyboards import KeyboardMarkups
-from utils.validation import ValidationUtils
-from utils.security import SecurityUtils
-from utils.notifications import NotificationUtils
-from utils.excel_generator import ExcelGenerator
+from config import Config
+from database import db_manager
+from utils.keyboards import Keyboards
+from utils.validation import Validation
 from utils.bot_utils import BotUtils
+from utils.notifications import NotificationManager
+from utils.security import Security
+from utils.language import Translator, Languages
+from services.email_service import EmailService
 
-# Setup logging
+# Configure logging
 logging.basicConfig(
     level=getattr(logging, Config.LOG_LEVEL),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler(Config.LOG_FILE) if Config.LOG_FILE else logging.NullHandler()
-    ]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Global state management
+# Create logs directory if it doesn't exist
+os.makedirs(os.path.dirname(Config.LOG_FILE), exist_ok=True)
+
+# Initialize bot client
+app = Client(
+    "coderoot_bot",
+    api_id=Config.API_ID,
+    api_hash=Config.API_HASH,
+    bot_token=Config.BOT_TOKEN
+)
+
+# Initialize services
+email_service = EmailService()
+translator = Translator()
+
+# User states for conversation flow
 user_states = {}
 admin_states = {}
 
-class CodeRootBot:
-    """Main CodeRoot Bot class"""
-    
-    def __init__(self):
-        """Initialize the bot"""
-        # Validate configuration
-        Config.validate_required_config()
+# Startup event
+@app.on_ready
+async def startup():
+    """Bot startup initialization"""
+    try:
+        logger.info("🚀 CodeRoot Bot starting up...")
         
-        # Create Pyrogram client
-        self.app = Client(
-            "coderoot_bot",
-            api_id=Config.API_ID,
-            api_hash=Config.API_HASH,
-            bot_token=Config.BOT_TOKEN
-        )
+        # Initialize database
+        await db_manager.connect()
         
-        self.is_running = False
-        logger.info("🚀 CodeRoot MVP Bot initialized")
-    
-    async def start(self):
-        """Start the bot"""
-        try:
-            # Initialize database
-            await init_database()
-            logger.info("✅ Database connected")
-            
-            # Start Pyrogram client
-            await self.app.start()
-            me = await self.app.get_me()
-            logger.info(f"✅ Bot started: @{me.username} (ID: {me.id})")
-            
-            # Register handlers
-            self.register_handlers()
-            
-            # Send startup notification to admin
-            try:
-                await self.app.send_message(
-                    Config.ADMIN_USER_ID,
-                    f"🚀 **CodeRoot MVP Bot Started**\n\n"
-                    f"🤖 Bot: @{me.username}\n"
-                    f"🆔 ID: {me.id}\n"
-                    f"🕐 Time: {datetime.now()}\n"
-                    f"📊 Mode: Production\n\n"
-                    f"✅ All systems operational!"
-                )
-            except Exception as e:
-                logger.warning(f"Could not send startup notification: {e}")
-            
-            self.is_running = True
-            logger.info("🎉 Bot is running and ready to serve!")
-            
-            # Keep running
-            await self.keep_alive()
-            
-        except Exception as e:
-            logger.error(f"❌ Error starting bot: {e}")
-            raise
-    
-    async def stop(self):
-        """Stop the bot gracefully"""
-        logger.info("🛑 Stopping bot...")
-        self.is_running = False
+        # Initialize services
+        logger.info("✅ CodeRoot Bot started successfully!")
         
-        # Send shutdown notification
-        try:
-            await self.app.send_message(
-                Config.ADMIN_USER_ID,
-                f"🛑 **CodeRoot Bot Stopped**\n\n"
-                f"🕐 Time: {datetime.now()}\n"
-                f"💾 All data saved successfully"
-            )
-        except:
-            pass
-        
-        # Close connections
-        await self.app.stop()
-        await close_database()
-        logger.info("✅ Bot stopped gracefully")
-    
-    async def keep_alive(self):
-        """Keep the bot running"""
-        while self.is_running:
-            await asyncio.sleep(1)
-    
-    def register_handlers(self):
-        """Register all bot handlers"""
-        # Command handlers
-        self.app.on_message(filters.command("start") & filters.private)(self.start_command)
-        self.app.on_message(filters.command("help") & filters.private)(self.help_command)
-        self.app.on_message(filters.command("admin") & filters.private)(self.admin_command)
-        self.app.on_message(filters.command("shop") & filters.private)(self.shop_command)
-        self.app.on_message(filters.command("profile") & filters.private)(self.profile_command)
-        self.app.on_message(filters.command("referral") & filters.private)(self.referral_command)
-        
-        # Callback handlers
-        self.app.on_callback_query()(self.callback_handler)
-        
-        # Message handlers
-        self.app.on_message(filters.text & filters.private)(self.text_handler)
-        self.app.on_message(filters.photo & filters.private)(self.photo_handler)
-        self.app.on_message(filters.document & filters.private)(self.document_handler)
-        
-        logger.info("✅ All handlers registered")
-    
-    # ==================== COMMAND HANDLERS ====================
-    
-    async def start_command(self, client: Client, message: Message):
-        """Handle /start command"""
+    except Exception as e:
+        logger.error(f"❌ Startup failed: {e}")
+        raise
+
+# Shutdown event
+async def shutdown():
+    """Clean shutdown"""
+    try:
+        await db_manager.disconnect()
+        logger.info("🛑 CodeRoot Bot shutdown complete")
+    except Exception as e:
+        logger.error(f"❌ Shutdown error: {e}")
+
+# Start command handler
+@app.on_message(filters.command("start"))
+async def start_command(client: Client, message: Message):
+    """Handle /start command"""
+    try:
         user_id = message.from_user.id
         
-        try:
-            # Check if user exists
-            user = await UserManager.get_user(user_id)
-            
-            if not user:
-                # Extract referral code from start parameter
-                referral_code = None
-                if message.command and len(message.command) > 1:
-                    referral_code = message.command[1]
-                
-                # Create new user
-                user_data = {
-                    "user_id": user_id,
-                    "username": message.from_user.username,
-                    "first_name": message.from_user.first_name,
-                    "last_name": message.from_user.last_name,
-                    "referred_by": referral_code
-                }
-                
-                user = await UserManager.create_user(user_data)
-                
-                # Send welcome message for new users
-                welcome_text = (
-                    f"🎉 **سلام {message.from_user.first_name}!**\n\n"
-                    f"به **CodeRoot** خوش آمدید! 🚀\n\n"
-                    f"🏪 **ایجاد فروشگاه آنلاین**\n"
-                    f"✨ **مدیریت محصولات**\n"
-                    f"📊 **گزارش‌گیری پیشرفته**\n"
-                    f"💰 **درآمدزایی**\n\n"
-                    f"🆔 **کد معرف شما:** `{user['referral_code']}`\n\n"
-                    f"👇 برای شروع، یکی از گزینه‌های زیر را انتخاب کنید:"
-                )
-                
-                # Send notification to admin about new user
-                try:
-                    await NotificationUtils.send_admin_notification(
-                        client,
-                        f"👤 **کاربر جدید ثبت‌نام کرد**\n\n"
-                        f"نام: {message.from_user.first_name}\n"
-                        f"آیدی: {user_id}\n"
-                        f"یوزرنیم: @{message.from_user.username or 'ندارد'}\n"
-                        f"معرف: {referral_code or 'ندارد'}\n"
-                        f"زمان: {datetime.now()}"
-                    )
-                except:
-                    pass
-            else:
-                # Returning user
-                welcome_text = (
-                    f"🔄 **سلام مجدد {message.from_user.first_name}!**\n\n"
-                    f"خوش برگشتید به **CodeRoot** 🎉\n\n"
-                    f"📊 **آمار شما:**\n"
-                    f"🏪 فروشگاه‌ها: {user['statistics']['total_shops']}\n"
-                    f"🛒 سفارش‌ها: {user['statistics']['total_orders']}\n"
-                    f"💰 درآمد کل: {user['statistics']['total_revenue']:,} تومان\n\n"
-                    f"👇 گزینه مورد نظر را انتخاب کنید:"
-                )
-            
-            # Check channel membership if required
-            if FEATURES["channel_join_required"] and Config.MAIN_CHANNEL_USERNAME:
-                is_member = await BotUtils.check_channel_membership(client, user_id, Config.MAIN_CHANNEL_USERNAME)
-                if not is_member:
-                    await message.reply_text(
-                        f"📢 **عضویت در کانال الزامی است**\n\n"
-                        f"برای استفاده از ربات، ابتدا در کانال ما عضو شوید:\n"
-                        f"👇 @{Config.MAIN_CHANNEL_USERNAME}\n\n"
-                        f"بعد از عضویت، دوباره /start کنید.",
-                        reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("🔗 عضویت در کانال", url=f"https://t.me/{Config.MAIN_CHANNEL_USERNAME}")],
-                            [InlineKeyboardButton("✅ عضو شدم", callback_data="check_membership")]
-                        ])
-                    )
-                    return
-            
-            # Send main menu
-            await message.reply_text(
-                welcome_text,
-                reply_markup=KeyboardMarkups.main_menu_keyboard(user)
-            )
-            
-            # Record analytics
-            await AnalyticsManager.record_event({
-                "user_id": user_id,
-                "event_type": "bot_start",
-                "data": {"is_new_user": user.get("created_at") == user.get("updated_at")}
-            })
-            
-        except Exception as e:
-            logger.error(f"Error in start command: {e}")
-            await message.reply_text(
-                "❌ خطایی رخ داد. لطفاً دوباره تلاش کنید.\n\n"
-                "در صورت تکرار مشکل، با پشتیبانی تماس بگیرید."
-            )
-    
-    async def help_command(self, client: Client, message: Message):
-        """Handle /help command"""
-        help_text = (
-            "📖 **راهنمای CodeRoot**\n\n"
-            "🚀 **دستورات اصلی:**\n"
-            "/start - شروع یا بازگشت به منوی اصلی\n"
-            "/help - نمایش این راهنما\n"
-            "/shop - مدیریت فروشگاه\n"
-            "/profile - پروفایل کاربری\n"
-            "/referral - سیستم معرفی\n\n"
-            "🏪 **قابلیت‌های اصلی:**\n"
-            "• ایجاد فروشگاه آنلاین\n"
-            "• مدیریت محصولات\n"
-            "• پردازش سفارش‌ها\n"
-            "• گزارش‌گیری فروش\n"
-            "• سیستم معرفی و درآمد\n\n"
-            "💎 **پلن‌های اشتراک:**\n"
-            f"🆓 رایگان: {PLANS['free']['max_products']} محصول\n"
-            f"⭐ حرفه‌ای: {PLANS['professional']['max_products']} محصول - {PLANS['professional']['price']:,} تومان\n"
-            f"👑 VIP: نامحدود - {PLANS['vip']['price']:,} تومان\n\n"
-            "🆘 برای پشتیبانی با مدیر تماس بگیرید."
-        )
+        # Update user activity
+        if db_manager.users:
+            await db_manager.users.update_last_activity(user_id)
         
-        await message.reply_text(
-            help_text,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🏠 بازگشت به منوی اصلی", callback_data="main_menu")]
-            ])
+        # Check if user exists
+        user = await db_manager.users.get_user(user_id) if db_manager.users else None
+        
+        if not user:
+            # Create new user
+            user_data = {
+                'user_id': user_id,
+                'username': message.from_user.username,
+                'first_name': message.from_user.first_name,
+                'last_name': message.from_user.last_name,
+                'language': Config.DEFAULT_LANGUAGE
+            }
+            
+            # Check for referral code
+            args = message.text.split()
+            if len(args) > 1 and args[1].startswith('ref_'):
+                referral_code = args[1][4:]  # Remove 'ref_' prefix
+                referrer = await db_manager.users.get_user_by_referral_code(referral_code)
+                if referrer:
+                    user_data['referred_by'] = referrer['user_id']
+            
+            if db_manager.users:
+                user = await db_manager.users.create_user(user_data)
+                
+                # Send welcome notification to admin
+                await NotificationManager.notify_new_user(client, user)
+        
+        # Show language selection if not set
+        if not user or not user.get('language'):
+            keyboard = translator.get_language_selection_keyboard()
+            await message.reply_text(
+                "🌍 لطفاً زبان خود را انتخاب کنید:\nPlease select your language:\nيرجى اختيار لغتك:",
+                reply_markup=keyboard
+            )
+            user_states[user_id] = 'selecting_language'
+            return
+        
+        # Set user language
+        user_lang = user.get('language', Config.DEFAULT_LANGUAGE)
+        
+        # Check channel membership if required
+        if Config.MAIN_CHANNEL_USERNAME and not await BotUtils.check_channel_membership(client, user_id, Config.MAIN_CHANNEL_USERNAME):
+            welcome_msg = translator.get_text('channel_join_required', user_lang)
+            keyboard = Keyboards.channel_join_keyboard(Config.MAIN_CHANNEL_USERNAME, user_lang)
+            await message.reply_text(welcome_msg, reply_markup=keyboard)
+            return
+        
+        # Send main menu
+        welcome_msg = translator.get_text('welcome_message', user_lang).format(
+            name=message.from_user.first_name or "کاربر"
         )
-    
-    async def admin_command(self, client: Client, message: Message):
-        """Handle /admin command"""
+        keyboard = Keyboards.main_menu_keyboard(user_lang)
+        
+        await message.reply_text(welcome_msg, reply_markup=keyboard)
+        
+        # Record analytics
+        if db_manager.analytics:
+            await db_manager.analytics.record_event('user_start', user_id)
+        
+    except Exception as e:
+        logger.error(f"Error in start command: {e}")
+        await message.reply_text("خطایی رخ داد. لطفاً دوباره تلاش کنید.")
+
+# Help command
+@app.on_message(filters.command("help"))
+async def help_command(client: Client, message: Message):
+    """Handle /help command"""
+    try:
+        user_id = message.from_user.id
+        user = await db_manager.users.get_user(user_id) if db_manager.users else None
+        user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
+        
+        help_text = translator.get_text('help_message', user_lang)
+        await message.reply_text(help_text)
+        
+    except Exception as e:
+        logger.error(f"Error in help command: {e}")
+
+# Admin command
+@app.on_message(filters.command("admin"))
+async def admin_command(client: Client, message: Message):
+    """Handle /admin command"""
+    try:
         user_id = message.from_user.id
         
-        if user_id != Config.ADMIN_USER_ID:
+        if not Security.is_admin(user_id):
             await message.reply_text("❌ شما مجوز دسترسی به پنل مدیریت را ندارید.")
             return
         
-        # Show admin panel
-        admin_text = (
-            f"🔧 **پنل مدیریت CodeRoot**\n\n"
-            f"👋 سلام {message.from_user.first_name}!\n\n"
-            f"📊 **آمار کلی:**\n"
-            f"👥 کاربران: {await UserManager.get_users_count()}\n"
-            f"🏪 فروشگاه‌ها: {await ShopManager.get_shops_count()}\n"
-            f"📦 محصولات: {await ProductManager.get_products_count_by_shop('all')}\n\n"
-            f"⚙️ **عملیات مدیریت:**"
+        keyboard = Keyboards.admin_main_keyboard()
+        await message.reply_text(
+            "🔧 پنل مدیریت CodeRoot\n\nگزینه مورد نظر خود را انتخاب کنید:",
+            reply_markup=keyboard
         )
         
-        await message.reply_text(
-            admin_text,
-            reply_markup=KeyboardMarkups.admin_main_keyboard()
-        )
-    
-    async def shop_command(self, client: Client, message: Message):
-        """Handle /shop command"""
+    except Exception as e:
+        logger.error(f"Error in admin command: {e}")
+
+# Shop command
+@app.on_message(filters.command("shop"))
+async def shop_command(client: Client, message: Message):
+    """Handle /shop command"""
+    try:
         user_id = message.from_user.id
         
-        # Check if user exists
-        user = await UserManager.get_user(user_id)
-        if not user:
-            await message.reply_text("❌ ابتدا /start کنید.")
-            return
-        
         # Check if user has a shop
-        shop = await ShopManager.get_shop_by_owner(user_id)
+        shop = await db_manager.shops.get_shop_by_owner(user_id) if db_manager.shops else None
         
         if shop:
             # Show shop management
-            shop_text = (
-                f"🏪 **فروشگاه: {shop['name']}**\n\n"
-                f"📊 **آمار فروشگاه:**\n"
-                f"📦 محصولات: {shop['statistics']['total_products']}\n"
-                f"🛒 سفارش‌ها: {shop['statistics']['total_orders']}\n"
-                f"💰 درآمد: {shop['statistics']['total_revenue']:,} تومان\n"
-                f"👥 مشتریان: {shop['statistics']['total_customers']}\n\n"
-                f"⚙️ **مدیریت فروشگاه:**"
-            )
+            user = await db_manager.users.get_user(user_id) if db_manager.users else None
+            user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
             
-            await message.reply_text(
-                shop_text,
-                reply_markup=KeyboardMarkups.shop_management_keyboard(shop)
+            keyboard = Keyboards.shop_management_keyboard(user_lang)
+            shop_info = translator.get_text('shop_info', user_lang).format(
+                shop_name=shop['name'],
+                plan=shop['plan'],
+                status=shop['status']
             )
+            await message.reply_text(shop_info, reply_markup=keyboard)
         else:
             # Show shop creation options
-            await message.reply_text(
-                "🏪 **ایجاد فروشگاه جدید**\n\n"
-                "شما هنوز فروشگاهی ندارید.\n"
-                "برای شروع کسب‌وکار آنلاین، فروشگاه خود را بسازید!\n\n"
-                "👇 پلن مورد نظر را انتخاب کنید:",
-                reply_markup=KeyboardMarkups.shop_plans_keyboard()
-            )
-    
-    async def profile_command(self, client: Client, message: Message):
-        """Handle /profile command"""
-        user_id = message.from_user.id
+            user = await db_manager.users.get_user(user_id) if db_manager.users else None
+            user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
+            
+            keyboard = Keyboards.shop_plans_keyboard(user_lang)
+            plans_info = translator.get_text('shop_plans_info', user_lang)
+            await message.reply_text(plans_info, reply_markup=keyboard)
         
-        user = await UserManager.get_user(user_id)
+    except Exception as e:
+        logger.error(f"Error in shop command: {e}")
+
+# Profile command
+@app.on_message(filters.command("profile"))
+async def profile_command(client: Client, message: Message):
+    """Handle /profile command"""
+    try:
+        user_id = message.from_user.id
+        user = await db_manager.users.get_user(user_id) if db_manager.users else None
+        
         if not user:
-            await message.reply_text("❌ ابتدا /start کنید.")
+            await message.reply_text("کاربری یافت نشد. لطفاً /start را بزنید.")
             return
         
-        # Calculate days remaining
-        days_remaining = (user['subscription']['expires_at'] - datetime.utcnow()).days
+        user_lang = user.get('language', Config.DEFAULT_LANGUAGE)
         
-        profile_text = (
-            f"👤 **پروفایل کاربری**\n\n"
-            f"🆔 شناسه: {user_id}\n"
-            f"👤 نام: {user.get('first_name', 'نامشخص')}\n"
-            f"📱 یوزرنیم: @{user.get('username', 'ندارد')}\n\n"
-            f"💎 **اشتراک:**\n"
-            f"📋 پلن: {PLANS[user['subscription']['plan']]['name']}\n"
-            f"⏰ باقی‌مانده: {days_remaining} روز\n"
-            f"✅ وضعیت: {'فعال' if user['subscription']['is_active'] else 'غیرفعال'}\n\n"
-            f"📊 **آمار:**\n"
-            f"🏪 فروشگاه‌ها: {user['statistics']['total_shops']}\n"
-            f"🛒 سفارش‌ها: {user['statistics']['total_orders']}\n"
-            f"💰 درآمد کل: {user['statistics']['total_revenue']:,} تومان\n"
-            f"💵 پاداش معرفی: {user['statistics']['referral_earnings']:,} تومان\n\n"
-            f"🔗 **کد معرف:** `{user['referral_code']}`"
+        profile_text = translator.get_text('profile_info', user_lang).format(
+            name=user.get('first_name', 'نامشخص'),
+            username=f"@{user.get('username')}" if user.get('username') else 'ندارد',
+            join_date=user.get('created_at', datetime.now()).strftime('%Y/%m/%d'),
+            referral_count=user.get('referral_count', 0),
+            total_earnings=f"{user.get('total_earnings', 0):,} تومان"
         )
         
-        await message.reply_text(
-            profile_text,
-            reply_markup=KeyboardMarkups.profile_keyboard()
-        )
-    
-    async def referral_command(self, client: Client, message: Message):
-        """Handle /referral command"""
+        keyboard = Keyboards.profile_keyboard(user_lang)
+        await message.reply_text(profile_text, reply_markup=keyboard)
+        
+    except Exception as e:
+        logger.error(f"Error in profile command: {e}")
+
+# Referral command
+@app.on_message(filters.command("referral"))
+async def referral_command(client: Client, message: Message):
+    """Handle /referral command"""
+    try:
         user_id = message.from_user.id
+        user = await db_manager.users.get_user(user_id) if db_manager.users else None
         
-        user = await UserManager.get_user(user_id)
         if not user:
-            await message.reply_text("❌ ابتدا /start کنید.")
+            await message.reply_text("کاربری یافت نشد. لطفاً /start را بزنید.")
             return
         
-        # Get referral statistics
-        referrals = await UserManager.get_all_users(filters={"referred_by": user['referral_code']})
-        total_referrals = len(referrals)
+        user_lang = user.get('language', Config.DEFAULT_LANGUAGE)
         
-        referral_text = (
-            f"🎁 **سیستم معرفی CodeRoot**\n\n"
-            f"🔗 **لینک معرف شما:**\n"
-            f"`https://t.me/{Config.BOT_USERNAME}?start={user['referral_code']}`\n\n"
-            f"📊 **آمار معرفی:**\n"
-            f"👥 تعداد معرفی‌ها: {total_referrals}\n"
-            f"💰 درآمد معرفی: {user['statistics']['referral_earnings']:,} تومان\n\n"
-            f"💡 **نحوه کسب درآمد:**\n"
-            f"• هر معرفی: {Config.REFERRAL_COMMISSION}% از اشتراک\n"
-            f"• حداقل برداشت: {50000:,} تومان\n"
-            f"• پرداخت: ماهانه\n\n"
-            f"🚀 **لینک خود را به‌اشتراک بگذارید و درآمد کسب کنید!**"
+        # Generate referral code if not exists
+        referral_code = user.get('referral_code')
+        if not referral_code:
+            referral_code = BotUtils.generate_random_string(8)
+            await db_manager.users.update_user(user_id, {'referral_code': referral_code})
+        
+        bot_username = Config.BOT_USERNAME
+        referral_link = f"https://t.me/{bot_username}?start=ref_{referral_code}"
+        
+        referral_text = translator.get_text('referral_info', user_lang).format(
+            referral_code=referral_code,
+            referral_link=referral_link,
+            referral_count=user.get('referral_count', 0),
+            commission=Config.REFERRAL_COMMISSION
         )
         
-        await message.reply_text(
-            referral_text,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔄 به‌اشتراک‌گذاری لینک", switch_inline_query=f"🚀 ایجاد فروشگاه آنلاین با CodeRoot!\n\n🎁 با لینک من ثبت‌نام کن:\nhttps://t.me/{Config.BOT_USERNAME}?start={user['referral_code']}")],
-                [InlineKeyboardButton("📊 جزئیات معرفی‌ها", callback_data="referral_details")],
-                [InlineKeyboardButton("🏠 منوی اصلی", callback_data="main_menu")]
-            ])
-        )
-    
-    # ==================== CALLBACK HANDLERS ====================
-    
-    async def callback_handler(self, client: Client, callback_query: CallbackQuery):
-        """Handle all callback queries"""
+        keyboard = Keyboards.referral_keyboard(user_lang)
+        await message.reply_text(referral_text, reply_markup=keyboard)
+        
+    except Exception as e:
+        logger.error(f"Error in referral command: {e}")
+
+# Callback query handler
+@app.on_callback_query()
+async def callback_handler(client: Client, callback_query: CallbackQuery):
+    """Handle all callback queries"""
+    try:
         data = callback_query.data
         user_id = callback_query.from_user.id
         
-        try:
-            # Check membership callbacks
-            if data == "check_membership":
-                if FEATURES["channel_join_required"] and Config.MAIN_CHANNEL_USERNAME:
-                    is_member = await BotUtils.check_channel_membership(client, user_id, Config.MAIN_CHANNEL_USERNAME)
-                    if is_member:
-                        await callback_query.answer("✅ عضویت شما تأیید شد!")
-                        # Redirect to main menu
-                        user = await UserManager.get_user(user_id)
-                        await callback_query.message.edit_text(
-                            f"✅ **عضویت تأیید شد!**\n\n"
-                            f"حالا می‌توانید از تمام امکانات CodeRoot استفاده کنید.\n\n"
-                            f"👇 گزینه مورد نظر را انتخاب کنید:",
-                            reply_markup=KeyboardMarkups.main_menu_keyboard(user)
-                        )
-                    else:
-                        await callback_query.answer("❌ ابتدا در کانال عضو شوید!", show_alert=True)
-                return
-            
-            # Main menu callbacks
-            if data == "main_menu":
-                user = await UserManager.get_user(user_id)
-                await callback_query.message.edit_text(
-                    f"🏠 **منوی اصلی CodeRoot**\n\n"
-                    f"👋 سلام {callback_query.from_user.first_name}!\n\n"
-                    f"👇 گزینه مورد نظر را انتخاب کنید:",
-                    reply_markup=KeyboardMarkups.main_menu_keyboard(user)
-                )
-                return
-            
-            # Shop-related callbacks
-            if data.startswith("shop_"):
-                await self.handle_shop_callbacks(client, callback_query)
-                return
-            
-            # Admin callbacks
-            if data.startswith("admin_"):
-                if user_id != Config.ADMIN_USER_ID:
-                    await callback_query.answer("❌ دسترسی محدود!", show_alert=True)
-                    return
-                await self.handle_admin_callbacks(client, callback_query)
-                return
-            
-            # Payment callbacks
-            if data.startswith("payment_"):
-                await self.handle_payment_callbacks(client, callback_query)
-                return
-            
-            # Profile callbacks
-            if data.startswith("profile_"):
-                await self.handle_profile_callbacks(client, callback_query)
-                return
-            
-            # Default callback
-            await callback_query.answer("🔄 در حال پردازش...")
-            
-        except Exception as e:
-            logger.error(f"Error in callback handler: {e}")
-            await callback_query.answer("❌ خطایی رخ داد!", show_alert=True)
-    
-    async def handle_shop_callbacks(self, client: Client, callback_query: CallbackQuery):
-        """Handle shop-related callbacks"""
-        data = callback_query.data
-        user_id = callback_query.from_user.id
-        
-        if data == "shop_create":
-            await callback_query.message.edit_text(
-                "🏪 **ایجاد فروشگاه جدید**\n\n"
-                "برای شروع کسب‌وکار آنلاین، پلن مناسب خود را انتخاب کنید:\n\n"
-                "👇 هر پلن شامل ویژگی‌های خاص خود است:",
-                reply_markup=KeyboardMarkups.shop_plans_keyboard()
-            )
-        
-        elif data.startswith("plan_"):
-            plan_name = data.split("_")[1]
-            plan = PLANS.get(plan_name)
-            
-            if plan:
-                plan_text = (
-                    f"💎 **پلن {plan['name']}**\n\n"
-                    f"💰 قیمت: {plan['price']:,} تومان\n"
-                    f"📦 محصولات: {plan['max_products'] if plan['max_products'] != -1 else 'نامحدود'}\n"
-                    f"📊 گزارش‌ها: {'پیشرفته' if plan['advanced_reports'] else 'پایه'}\n"
-                    f"💸 کارمزد: {plan['commission']}%\n\n"
-                    f"✨ **ویژگی‌ها:**\n"
-                )
-                
-                for feature in plan['features']:
-                    plan_text += f"• {feature}\n"
-                
-                keyboard = []
-                if plan['price'] > 0:
-                    keyboard.append([InlineKeyboardButton(f"💳 پرداخت {plan['price']:,} تومان", callback_data=f"payment_plan_{plan_name}")])
-                else:
-                    keyboard.append([InlineKeyboardButton("🆓 انتخاب پلن رایگان", callback_data=f"create_shop_{plan_name}")])
-                
-                keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="shop_create")])
-                
-                await callback_query.message.edit_text(
-                    plan_text,
-                    reply_markup=InlineKeyboardMarkup(keyboard)
-                )
-        
-        elif data.startswith("create_shop_"):
-            plan_name = data.split("_")[2]
-            user_states[user_id] = {"state": "waiting_shop_name", "plan": plan_name}
-            
-            await callback_query.message.edit_text(
-                f"🏪 **ایجاد فروشگاه - پلن {PLANS[plan_name]['name']}**\n\n"
-                f"📝 نام فروشگاه خود را وارد کنید:\n\n"
-                f"🔸 نام باید بین 3 تا 50 کاراکتر باشد\n"
-                f"🔸 از کاراکترهای فارسی و انگلیسی استفاده کنید\n"
-                f"🔸 نام منحصر به فرد انتخاب کنید",
-                reply_markup=KeyboardMarkups.cancel_keyboard()
-            )
-    
-    async def handle_admin_callbacks(self, client: Client, callback_query: CallbackQuery):
-        """Handle admin panel callbacks"""
-        data = callback_query.data
-        user_id = callback_query.from_user.id
-        
-        if data == "admin_users":
-            # Show user management
-            users = await UserManager.get_all_users(limit=10)
-            total_users = await UserManager.get_users_count()
-            
-            users_text = f"👥 **مدیریت کاربران**\n\n📊 تعداد کل: {total_users}\n\n"
-            
-            for i, user in enumerate(users[:5], 1):
-                status = "✅" if user['status'] == 'active' else "❌"
-                users_text += f"{i}. {status} {user.get('first_name', 'نامشخص')} - {user['user_id']}\n"
-            
-            await callback_query.message.edit_text(
-                users_text,
-                reply_markup=KeyboardMarkups.admin_users_keyboard()
-            )
-        
-        elif data == "admin_shops":
-            # Show shop management
-            shops = await ShopManager.get_all_shops(limit=10)
-            total_shops = await ShopManager.get_shops_count()
-            
-            shops_text = f"🏪 **مدیریت فروشگاه‌ها**\n\n📊 تعداد کل: {total_shops}\n\n"
-            
-            for i, shop in enumerate(shops[:5], 1):
-                status = "✅" if shop['status'] == 'active' else "⏳" if shop['status'] == 'pending' else "❌"
-                shops_text += f"{i}. {status} {shop['name']} - {PLANS[shop['plan']]['name']}\n"
-            
-            await callback_query.message.edit_text(
-                shops_text,
-                reply_markup=KeyboardMarkups.admin_shops_keyboard()
-            )
-        
-        elif data == "admin_stats":
-            # Show statistics
-            total_users = await UserManager.get_users_count()
-            total_shops = await ShopManager.get_shops_count()
-            active_shops = await ShopManager.get_shops_count({"status": "active"})
-            pending_shops = await ShopManager.get_shops_count({"status": "pending"})
-            
-            stats_text = (
-                f"📊 **آمار کلی سیستم**\n\n"
-                f"👥 **کاربران:**\n"
-                f"• کل: {total_users}\n"
-                f"• امروز: {await UserManager.get_users_count({'created_at': {'$gte': datetime.utcnow().replace(hour=0, minute=0, second=0)}})}\n\n"
-                f"🏪 **فروشگاه‌ها:**\n"
-                f"• کل: {total_shops}\n"
-                f"• فعال: {active_shops}\n"
-                f"• در انتظار: {pending_shops}\n\n"
-                f"💰 **مالی:**\n"
-                f"• کل پرداخت‌ها: محاسبه...\n"
-                f"• درآمد ماهانه: محاسبه...\n\n"
-                f"🕐 آخرین به‌روزرسانی: {datetime.now().strftime('%H:%M')}"
-            )
-            
-            await callback_query.message.edit_text(
-                stats_text,
-                reply_markup=KeyboardMarkups.admin_stats_keyboard()
-            )
-    
-    async def handle_payment_callbacks(self, client: Client, callback_query: CallbackQuery):
-        """Handle payment-related callbacks"""
-        # Payment processing logic
-        pass
-    
-    async def handle_profile_callbacks(self, client: Client, callback_query: CallbackQuery):
-        """Handle profile-related callbacks"""
-        # Profile management logic
-        pass
-    
-    # ==================== MESSAGE HANDLERS ====================
-    
-    async def text_handler(self, client: Client, message: Message):
-        """Handle text messages"""
-        user_id = message.from_user.id
-        text = message.text
-        
-        # Check if user is in a specific state
-        if user_id in user_states:
-            state = user_states[user_id]["state"]
-            
-            if state == "waiting_shop_name":
-                await self.process_shop_name(client, message)
-            elif state == "waiting_shop_description":
-                await self.process_shop_description(client, message)
-            elif state == "waiting_bot_token":
-                await self.process_bot_token(client, message)
-            elif state == "waiting_phone":
-                await self.process_phone(client, message)
-            # Add more states as needed
-        
-        # Handle admin states
-        elif user_id in admin_states:
-            await self.handle_admin_states(client, message)
-    
-    async def photo_handler(self, client: Client, message: Message):
-        """Handle photo messages (receipts, etc.)"""
-        user_id = message.from_user.id
-        
-        if user_id in user_states and user_states[user_id]["state"] == "waiting_payment_receipt":
-            # Process payment receipt
-            await self.process_payment_receipt(client, message)
+        # Route to appropriate handler
+        if data.startswith('lang_'):
+            await handle_language_selection(client, callback_query)
+        elif data.startswith('shop_'):
+            await handle_shop_callbacks(client, callback_query)
+        elif data.startswith('admin_'):
+            await handle_admin_callbacks(client, callback_query)
+        elif data.startswith('payment_'):
+            await handle_payment_callbacks(client, callback_query)
+        elif data.startswith('profile_'):
+            await handle_profile_callbacks(client, callback_query)
         else:
-            await message.reply_text("📷 عکس دریافت شد. اگر این رسید پرداخت است، ابتدا مرحله پرداخت را شروع کنید.")
-    
-    async def document_handler(self, client: Client, message: Message):
-        """Handle document messages"""
-        await message.reply_text("📄 فایل دریافت شد. لطفاً از منو گزینه مناسب را انتخاب کنید.")
-    
-    # ==================== PROCESS FUNCTIONS ====================
-    
-    async def process_shop_name(self, client: Client, message: Message):
-        """Process shop name input"""
+            await callback_query.answer("عملیات نامشخص")
+        
+    except Exception as e:
+        logger.error(f"Error in callback handler: {e}")
+        await callback_query.answer("خطایی رخ داد")
+
+# Language selection handler
+async def handle_language_selection(client: Client, callback_query: CallbackQuery):
+    """Handle language selection"""
+    try:
+        user_id = callback_query.from_user.id
+        lang_code = callback_query.data.split('_')[1]
+        
+        # Update user language
+        if db_manager.users:
+            await db_manager.users.update_user(user_id, {'language': lang_code})
+        
+        # Remove language selection state
+        user_states.pop(user_id, None)
+        
+        # Send welcome message in selected language
+        welcome_msg = translator.get_text('welcome_message', lang_code).format(
+            name=callback_query.from_user.first_name or "کاربر"
+        )
+        keyboard = Keyboards.main_menu_keyboard(lang_code)
+        
+        await callback_query.message.edit_text(welcome_msg, reply_markup=keyboard)
+        await callback_query.answer(translator.get_text('language_selected', lang_code))
+        
+    except Exception as e:
+        logger.error(f"Error in language selection: {e}")
+
+# Shop callbacks handler
+async def handle_shop_callbacks(client: Client, callback_query: CallbackQuery):
+    """Handle shop-related callbacks"""
+    try:
+        user_id = callback_query.from_user.id
+        action = callback_query.data.split('_', 1)[1]
+        
+        if action == 'create':
+            await start_shop_creation(client, callback_query)
+        elif action.startswith('plan_'):
+            await select_plan(client, callback_query)
+        elif action == 'manage':
+            await show_shop_management(client, callback_query)
+        elif action == 'products':
+            await show_products_menu(client, callback_query)
+        elif action == 'orders':
+            await show_orders_menu(client, callback_query)
+        elif action == 'reports':
+            await show_reports_menu(client, callback_query)
+        else:
+            await callback_query.answer("عملیات نامشخص")
+        
+    except Exception as e:
+        logger.error(f"Error in shop callbacks: {e}")
+
+# Admin callbacks handler
+async def handle_admin_callbacks(client: Client, callback_query: CallbackQuery):
+    """Handle admin panel callbacks"""
+    try:
+        user_id = callback_query.from_user.id
+        
+        if not Security.is_admin(user_id):
+            await callback_query.answer("❌ عدم دسترسی")
+            return
+        
+        action = callback_query.data.split('_', 1)[1]
+        
+        if action == 'users':
+            await show_admin_users(client, callback_query)
+        elif action == 'shops':
+            await show_admin_shops(client, callback_query)
+        elif action == 'stats':
+            await show_admin_stats(client, callback_query)
+        elif action == 'payments':
+            await show_admin_payments(client, callback_query)
+        elif action == 'broadcast':
+            await start_broadcast(client, callback_query)
+        else:
+            await callback_query.answer("عملیات نامشخص")
+        
+    except Exception as e:
+        logger.error(f"Error in admin callbacks: {e}")
+
+# Payment callbacks handler
+async def handle_payment_callbacks(client: Client, callback_query: CallbackQuery):
+    """Handle payment-related callbacks"""
+    try:
+        user_id = callback_query.from_user.id
+        action = callback_query.data.split('_', 1)[1]
+        
+        if action == 'submit':
+            await process_payment_submission(client, callback_query)
+        elif action.startswith('verify_'):
+            await verify_payment(client, callback_query)
+        else:
+            await callback_query.answer("عملیات نامشخص")
+        
+    except Exception as e:
+        logger.error(f"Error in payment callbacks: {e}")
+
+# Profile callbacks handler
+async def handle_profile_callbacks(client: Client, callback_query: CallbackQuery):
+    """Handle profile-related callbacks"""
+    try:
+        user_id = callback_query.from_user.id
+        action = callback_query.data.split('_', 1)[1]
+        
+        if action == 'settings':
+            await show_profile_settings(client, callback_query)
+        elif action == 'referrals':
+            await show_referral_info(client, callback_query)
+        else:
+            await callback_query.answer("عملیات نامشخص")
+        
+    except Exception as e:
+        logger.error(f"Error in profile callbacks: {e}")
+
+# Text message handler
+@app.on_message(filters.text & ~filters.command)
+async def text_handler(client: Client, message: Message):
+    """Handle text messages based on user state"""
+    try:
+        user_id = message.from_user.id
+        state = user_states.get(user_id)
+        
+        if state == 'entering_shop_name':
+            await process_shop_name(client, message)
+        elif state == 'entering_shop_description':
+            await process_shop_description(client, message)
+        elif state == 'adding_product_name':
+            await process_product_name(client, message)
+        elif state == 'adding_product_price':
+            await process_product_price(client, message)
+        elif state == 'broadcast_message':
+            await process_broadcast_message(client, message)
+        else:
+            # Default response
+            user = await db_manager.users.get_user(user_id) if db_manager.users else None
+            user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
+            
+            help_text = translator.get_text('unknown_command', user_lang)
+            keyboard = Keyboards.main_menu_keyboard(user_lang)
+            await message.reply_text(help_text, reply_markup=keyboard)
+        
+    except Exception as e:
+        logger.error(f"Error in text handler: {e}")
+
+# Photo handler
+@app.on_message(filters.photo)
+async def photo_handler(client: Client, message: Message):
+    """Handle photo uploads"""
+    try:
+        user_id = message.from_user.id
+        state = user_states.get(user_id)
+        
+        if state == 'uploading_product_image':
+            await process_product_image(client, message)
+        elif state == 'uploading_payment_receipt':
+            await process_payment_receipt(client, message)
+        else:
+            await message.reply_text("تصویر دریافت شد اما در حال حاضر منتظر تصویری نیستم.")
+        
+    except Exception as e:
+        logger.error(f"Error in photo handler: {e}")
+
+# Document handler
+@app.on_message(filters.document)
+async def document_handler(client: Client, message: Message):
+    """Handle document uploads"""
+    try:
+        user_id = message.from_user.id
+        state = user_states.get(user_id)
+        
+        if state == 'uploading_product_document':
+            await process_product_document(client, message)
+        else:
+            await message.reply_text("فایل دریافت شد اما در حال حاضر منتظر فایلی نیستم.")
+        
+    except Exception as e:
+        logger.error(f"Error in document handler: {e}")
+
+# Helper functions for shop creation
+async def start_shop_creation(client: Client, callback_query: CallbackQuery):
+    """Start shop creation process"""
+    try:
+        user_id = callback_query.from_user.id
+        
+        # Check if user already has a shop
+        shop = await db_manager.shops.get_shop_by_owner(user_id) if db_manager.shops else None
+        if shop:
+            await callback_query.answer("شما قبلاً فروشگاه ایجاد کرده‌اید")
+            return
+        
+        user = await db_manager.users.get_user(user_id) if db_manager.users else None
+        user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
+        
+        # Start shop creation flow
+        prompt_text = translator.get_text('enter_shop_name', user_lang)
+        await callback_query.message.edit_text(prompt_text)
+        user_states[user_id] = 'entering_shop_name'
+        await callback_query.answer()
+        
+    except Exception as e:
+        logger.error(f"Error starting shop creation: {e}")
+
+async def create_user_shop(user_id: int, shop_data: dict) -> dict:
+    """Create a new shop for user"""
+    try:
+        if not db_manager.shops:
+            return None
+        
+        # Create shop in database
+        shop = await db_manager.shops.create_shop(shop_data)
+        
+        # TODO: Create sub-bot (placeholder for now)
+        # shop_token = await create_sub_bot(shop['name'])
+        # if shop_token:
+        #     await db_manager.shops.update_shop(shop['_id'], {'bot_token': shop_token})
+        
+        # Send notification to admin
+        await NotificationManager.notify_new_shop(None, shop)  # client will be passed properly in real implementation
+        
+        return shop
+        
+    except Exception as e:
+        logger.error(f"Error creating user shop: {e}")
+        return None
+
+async def process_shop_name(client: Client, message: Message):
+    """Process shop name input"""
+    try:
         user_id = message.from_user.id
         shop_name = message.text.strip()
         
         # Validate shop name
-        if not ValidationUtils.validate_shop_name(shop_name):
-            await message.reply_text(
-                "❌ نام فروشگاه نامعتبر است.\n\n"
-                "🔸 نام باید بین 3 تا 50 کاراکتر باشد\n"
-                "🔸 فقط حروف، اعداد و فاصله مجاز است\n\n"
-                "لطفاً نام دیگری انتخاب کنید:"
-            )
+        if not Validation.validate_shop_name(shop_name):
+            await message.reply_text("نام فروشگاه نامعتبر است. لطفاً نام دیگری انتخاب کنید.")
             return
         
         # Store shop name and ask for description
-        user_states[user_id]["shop_name"] = shop_name
-        user_states[user_id]["state"] = "waiting_shop_description"
+        user_states[user_id] = 'entering_shop_description'
+        admin_states[user_id] = {'shop_name': shop_name}
         
-        await message.reply_text(
-            f"✅ نام فروشگاه: **{shop_name}**\n\n"
-            f"📝 حالا توضیح کوتاهی درباره فروشگاه خود بنویسید:\n\n"
-            f"🔸 حداکثر 200 کاراکتر\n"
-            f"🔸 محصولات و خدمات خود را معرفی کنید\n"
-            f"🔸 اختیاری است (می‌توانید /skip کنید)",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("⏭ رد کردن", callback_data="skip_description")]
-            ])
-        )
-    
-    async def process_shop_description(self, client: Client, message: Message):
-        """Process shop description input"""
+        await message.reply_text("✅ نام فروشگاه ثبت شد.\n\nحالا توضیح کوتاهی درباره فروشگاه خود بنویسید:")
+        
+    except Exception as e:
+        logger.error(f"Error processing shop name: {e}")
+
+async def process_shop_description(client: Client, message: Message):
+    """Process shop description input"""
+    try:
         user_id = message.from_user.id
         description = message.text.strip()
         
-        if len(description) > 200:
-            await message.reply_text("❌ توضیحات نباید بیش از 200 کاراکتر باشد. لطفاً کوتاه‌تر بنویسید:")
-            return
-        
-        user_states[user_id]["description"] = description
-        user_states[user_id]["state"] = "waiting_bot_token"
-        
-        await message.reply_text(
-            f"✅ توضیحات ثبت شد.\n\n"
-            f"🤖 **مرحله بعد: ساخت ربات فروشگاه**\n\n"
-            f"برای ایجاد ربات اختصاصی فروشگاه:\n"
-            f"1️⃣ به @BotFather بروید\n"
-            f"2️⃣ /newbot را ارسال کنید\n"
-            f"3️⃣ نام و یوزرنیم ربات را وارد کنید\n"
-            f"4️⃣ توکن دریافتی را اینجا ارسال کنید\n\n"
-            f"📝 توکن شبیه این است:\n"
-            f"`123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🤖 رفتن به BotFather", url="https://t.me/BotFather")],
-                [InlineKeyboardButton("❌ لغو", callback_data="cancel_shop_creation")]
-            ])
-        )
-    
-    async def process_bot_token(self, client: Client, message: Message):
-        """Process bot token input"""
-        user_id = message.from_user.id
-        bot_token = message.text.strip()
-        
-        # Validate bot token
-        if not ValidationUtils.validate_bot_token(bot_token):
-            await message.reply_text(
-                "❌ توکن ربات نامعتبر است.\n\n"
-                "🔸 توکن باید شامل : باشد\n"
-                "🔸 قسمت اول عدد باشد\n"
-                "🔸 از @BotFather کپی کنید\n\n"
-                "لطفاً توکن صحیح را ارسال کنید:"
-            )
-            return
-        
-        # Check if token is already used (placeholder - method needs implementation)
-        # existing_shop = await ShopManager.get_shop_by_token(bot_token)
-        # if existing_shop:
-            await message.reply_text(
-                "❌ این توکن قبلاً استفاده شده است.\n\n"
-                "لطفاً ربات جدیدی از @BotFather بسازید و توکن آن را ارسال کنید."
-            )
-            return
-        
-        user_states[user_id]["bot_token"] = bot_token
-        user_states[user_id]["state"] = "waiting_phone"
-        
-        await message.reply_text(
-            f"✅ توکن ربات تأیید شد.\n\n"
-            f"📱 **شماره تماس پشتیبانی**\n\n"
-            f"لطفاً شماره تلفن خود را برای ارتباط مشتریان وارد کنید:\n\n"
-            f"🔸 فرمت: 09123456789\n"
-            f"🔸 بدون فاصله و خط تیره\n"
-            f"🔸 شماره معتبر ایرانی",
-        )
-    
-    async def process_phone(self, client: Client, message: Message):
-        """Process phone number input"""
-        user_id = message.from_user.id
-        phone = message.text.strip()
-        
-        if not BotUtils.validate_phone(phone):
-            await message.reply_text(
-                "❌ شماره تلفن نامعتبر است.\n\n"
-                "🔸 فرمت صحیح: 09123456789\n"
-                "🔸 11 رقم\n"
-                "🔸 با 09 شروع شود\n\n"
-                "لطفاً شماره صحیح وارد کنید:"
-            )
-            return
+        shop_data = admin_states.get(user_id, {})
+        shop_data.update({
+            'description': description,
+            'owner_id': user_id
+        })
         
         # Create the shop
-        await self.create_user_shop(client, message, phone)
-    
-    async def create_user_shop(self, client: Client, message: Message, phone: str):
-        """Create the user's shop"""
-        user_id = message.from_user.id
-        state_data = user_states[user_id]
+        shop = await create_user_shop(user_id, shop_data)
         
-        try:
-            # Prepare shop data
-            shop_data = {
-                "owner_id": user_id,
-                "name": state_data["shop_name"],
-                "description": state_data.get("description", ""),
-                "bot_token": state_data["bot_token"],
-                "plan": state_data["plan"],
-                "phone": phone
-            }
+        if shop:
+            user_states.pop(user_id, None)
+            admin_states.pop(user_id, None)
             
-            # Create shop in database
-            shop = await ShopManager.create_shop(shop_data)
+            success_msg = f"🎉 فروشگاه '{shop['name']}' با موفقیت ایجاد شد!\n\n"
+            success_msg += "فروشگاه شما در حال بررسی است و پس از تأیید، فعال خواهد شد."
             
-            # Update user subscription if not free plan
-            if state_data["plan"] != "free":
-                plan_data = PLANS[state_data["plan"]]
-                await UserManager.update_subscription(user_id, state_data["plan"], plan_data["duration_days"])
-                
-                # Create payment record
-                payment_data = {
-                    "user_id": user_id,
-                    "shop_id": str(shop["_id"]),
-                    "amount": plan_data["price"],
-                    "payment_type": "subscription",
-                    "description": f"اشتراک {plan_data['name']} - فروشگاه {shop_data['name']}"
-                }
-                await PaymentManager.create_payment(payment_data)
-            
-            # Update user statistics
-            await UserManager.update_user(user_id, {
-                "$inc": {"statistics.total_shops": 1}
-            })
-            
-            # Clear user state
-            del user_states[user_id]
-            
-            # Success message
-            success_text = (
-                f"🎉 **فروشگاه شما با موفقیت ایجاد شد!**\n\n"
-                f"🏪 نام: {shop_data['name']}\n"
-                f"💎 پلن: {PLANS[state_data['plan']]['name']}\n"
-                f"🤖 ربات: @{state_data['bot_token'].split(':')[0]}\n"
-                f"📱 تماس: {phone}\n\n"
-                f"✅ **مراحل بعدی:**\n"
-                f"1️⃣ تأیید فروشگاه توسط مدیر\n"
-                f"2️⃣ تنظیم ربات فروشگاه\n"
-                f"3️⃣ افزودن محصولات\n\n"
-                f"📬 **اطلاع‌رسانی:**\n"
-                f"پس از تأیید، پیام اطلاع‌رسانی دریافت خواهید کرد."
-            )
-            
-            await message.reply_text(
-                success_text,
-                reply_markup=KeyboardMarkups.shop_created_keyboard()
-            )
-            
-            # Notify admin about new shop
-            try:
-                await NotificationUtils.send_admin_notification(
-                    client,
-                    f"🏪 **فروشگاه جدید ایجاد شد**\n\n"
-                    f"نام: {shop_data['name']}\n"
-                    f"مالک: {message.from_user.first_name} ({user_id})\n"
-                    f"پلن: {PLANS[state_data['plan']]['name']}\n"
-                    f"توکن: {state_data['bot_token'][:15]}...\n"
-                    f"تلفن: {phone}\n"
-                    f"زمان: {datetime.now()}\n\n"
-                    f"لطفاً تأیید کنید."
-                )
-            except Exception as e:
-                logger.warning(f"Could not send admin notification: {e}")
+            keyboard = Keyboards.shop_created_keyboard()
+            await message.reply_text(success_msg, reply_markup=keyboard)
+        else:
+            await message.reply_text("خطا در ایجاد فروشگاه. لطفاً دوباره تلاش کنید.")
         
-        except Exception as e:
-            logger.error(f"Error creating shop: {e}")
-            await message.reply_text(
-                "❌ خطایی در ایجاد فروشگاه رخ داد.\n\n"
-                "لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید."
-            )
-    
-    async def process_payment_receipt(self, client: Client, message: Message):
-        """Process payment receipt photo"""
-        # Payment receipt processing logic
-        pass
-    
-    async def handle_admin_states(self, client: Client, message: Message):
-        """Handle admin-specific states"""
-        # Admin state processing logic
-        pass
-
-# ==================== SIGNAL HANDLERS ====================
-
-def signal_handler(signum, frame):
-    """Handle termination signals"""
-    logger.info(f"Received signal {signum}")
-    # The main loop will handle cleanup
-
-# ==================== MAIN FUNCTION ====================
-
-async def main():
-    """Main function"""
-    # Setup signal handlers
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    # Create and start bot
-    bot = CodeRootBot()
-    
-    try:
-        await bot.start()
-    except KeyboardInterrupt:
-        logger.info("🛑 Received keyboard interrupt")
     except Exception as e:
-        logger.error(f"💥 Unexpected error: {e}")
+        logger.error(f"Error processing shop description: {e}")
+
+# Placeholder implementations for missing functions
+async def select_plan(client: Client, callback_query: CallbackQuery):
+    """Handle plan selection"""
+    await callback_query.answer("انتخاب پلن - در حال توسعه")
+
+async def show_shop_management(client: Client, callback_query: CallbackQuery):
+    """Show shop management menu"""
+    await callback_query.answer("مدیریت فروشگاه - در حال توسعه")
+
+async def show_products_menu(client: Client, callback_query: CallbackQuery):
+    """Show products management menu"""
+    await callback_query.answer("مدیریت محصولات - در حال توسعه")
+
+async def show_orders_menu(client: Client, callback_query: CallbackQuery):
+    """Show orders menu"""
+    await callback_query.answer("مدیریت سفارشات - در حال توسعه")
+
+async def show_reports_menu(client: Client, callback_query: CallbackQuery):
+    """Show reports menu"""
+    await callback_query.answer("گزارشات - در حال توسعه")
+
+async def show_admin_users(client: Client, callback_query: CallbackQuery):
+    """Show admin users management"""
+    await callback_query.answer("مدیریت کاربران - در حال توسعه")
+
+async def show_admin_shops(client: Client, callback_query: CallbackQuery):
+    """Show admin shops management"""
+    await callback_query.answer("مدیریت فروشگاه‌ها - در حال توسعه")
+
+async def show_admin_stats(client: Client, callback_query: CallbackQuery):
+    """Show admin statistics"""
+    await callback_query.answer("آمار و گزارشات - در حال توسعه")
+
+async def show_admin_payments(client: Client, callback_query: CallbackQuery):
+    """Show admin payments"""
+    await callback_query.answer("مدیریت پرداخت‌ها - در حال توسعه")
+
+async def start_broadcast(client: Client, callback_query: CallbackQuery):
+    """Start broadcast message"""
+    await callback_query.answer("ارسال پیام همگانی - در حال توسعه")
+
+async def process_payment_submission(client: Client, callback_query: CallbackQuery):
+    """Process payment submission"""
+    await callback_query.answer("ثبت پرداخت - در حال توسعه")
+
+async def verify_payment(client: Client, callback_query: CallbackQuery):
+    """Verify payment by admin"""
+    await callback_query.answer("تأیید پرداخت - در حال توسعه")
+
+async def show_profile_settings(client: Client, callback_query: CallbackQuery):
+    """Show profile settings"""
+    await callback_query.answer("تنظیمات پروفایل - در حال توسعه")
+
+async def show_referral_info(client: Client, callback_query: CallbackQuery):
+    """Show referral information"""
+    await callback_query.answer("اطلاعات معرفی - در حال توسعه")
+
+async def process_product_name(client: Client, message: Message):
+    """Process product name input"""
+    await message.reply_text("ثبت نام محصول - در حال توسعه")
+
+async def process_product_price(client: Client, message: Message):
+    """Process product price input"""
+    await message.reply_text("ثبت قیمت محصول - در حال توسعه")
+
+async def process_broadcast_message(client: Client, message: Message):
+    """Process broadcast message"""
+    await message.reply_text("ارسال پیام همگانی - در حال توسعه")
+
+async def process_product_image(client: Client, message: Message):
+    """Process product image upload"""
+    await message.reply_text("آپلود تصویر محصول - در حال توسعه")
+
+async def process_payment_receipt(client: Client, message: Message):
+    """Process payment receipt upload"""
+    await message.reply_text("آپلود رسید پرداخت - در حال توسعه")
+
+async def process_product_document(client: Client, message: Message):
+    """Process product document upload"""
+    await message.reply_text("آپلود مستندات محصول - در حال توسعه")
+
+# Main function
+async def main():
+    """Main function to run the bot"""
+    try:
+        # Validate configuration
+        Config.validate_required_config()
+        
+        # Start the bot
+        await app.start()
+        logger.info("🤖 CodeRoot Bot is running...")
+        
+        # Keep the bot running
+        await app.idle()
+        
+    except Exception as e:
+        logger.error(f"❌ Bot startup failed: {e}")
+        raise
     finally:
-        await bot.stop()
+        await shutdown()
 
 if __name__ == "__main__":
     try:
-        # Create logs directory
-        Path("logs").mkdir(exist_ok=True)
-        
-        # Run the bot
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n⏹️ Bot stopped by user")
+        logger.info("🛑 Bot stopped by user")
     except Exception as e:
-        print(f"\n💥 Fatal error: {e}")
-        sys.exit(1)
+        logger.error(f"❌ Fatal error: {e}")
