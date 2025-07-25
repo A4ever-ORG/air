@@ -1,400 +1,357 @@
 """
 File Storage Service for CodeRoot Bot
-Supports Amazon S3 and MinIO for file uploads and management
+Handles file uploads and management using S3-compatible storage
 """
 
-import asyncio
-import logging
-import mimetypes
-from typing import Dict, List, Optional, Tuple, BinaryIO
-from datetime import datetime, timedelta
-import hashlib
 import os
-from pathlib import Path
-
-try:
-    import boto3
-    from botocore.exceptions import ClientError, NoCredentialsError
-    BOTO3_AVAILABLE = True
-except ImportError:
-    BOTO3_AVAILABLE = False
-
+import logging
+import asyncio
+from typing import Optional, Dict, Any, BinaryIO
+from datetime import datetime, timedelta
+import boto3
+from botocore.exceptions import ClientError, NoCredentialsError
 from config import Config
-from utils.security import validate_file_extension, hash_file_content
 
 logger = logging.getLogger(__name__)
 
 class FileStorageService:
-    """Service for handling file uploads and storage"""
+    """
+    File storage service using S3-compatible storage (Amazon S3, MinIO, etc.)
+    """
     
     def __init__(self):
         """Initialize file storage service"""
-        self.s3_client = None
-        self.local_storage_path = Path("uploads")
-        self.max_file_size = 50 * 1024 * 1024  # 50MB
-        self.allowed_extensions = {
-            'images': ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
-            'documents': ['.pdf', '.doc', '.docx', '.txt'],
-            'videos': ['.mp4', '.avi', '.mov', '.webm'],
-            'audio': ['.mp3', '.wav', '.ogg', '.m4a']
-        }
-        self._initialize_storage()
-    
-    def _initialize_storage(self):
-        """Initialize storage backend (S3 or local)"""
-        if BOTO3_AVAILABLE and Config.S3_ACCESS_KEY and Config.S3_SECRET_KEY:
+        self.enabled = Config.S3_ACCESS_KEY and Config.S3_SECRET_KEY
+        self.client = None
+        
+        if self.enabled:
             try:
-                session = boto3.Session(
-                    aws_access_key_id=Config.S3_ACCESS_KEY,
-                    aws_secret_access_key=Config.S3_SECRET_KEY
-                )
-                
-                self.s3_client = session.client(
+                self.client = boto3.client(
                     's3',
+                    aws_access_key_id=Config.S3_ACCESS_KEY,
+                    aws_secret_access_key=Config.S3_SECRET_KEY,
                     endpoint_url=Config.S3_ENDPOINT_URL if Config.S3_ENDPOINT_URL else None,
                     region_name=Config.S3_REGION
                 )
-                
-                # Test connection
-                self.s3_client.head_bucket(Bucket=Config.S3_BUCKET_NAME)
-                logger.info("S3 storage initialized successfully")
-                
-            except (ClientError, NoCredentialsError) as e:
-                logger.warning(f"S3 initialization failed: {e}. Falling back to local storage")
-                self.s3_client = None
+                logger.info("File storage service initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize file storage: {e}")
+                self.enabled = False
         else:
-            logger.info("S3 credentials not provided. Using local storage")
-        
-        # Ensure local storage directory exists
-        self.local_storage_path.mkdir(exist_ok=True)
-        (self.local_storage_path / "images").mkdir(exist_ok=True)
-        (self.local_storage_path / "documents").mkdir(exist_ok=True)
-        (self.local_storage_path / "videos").mkdir(exist_ok=True)
-        (self.local_storage_path / "audio").mkdir(exist_ok=True)
+            logger.warning("File storage service disabled - missing credentials")
     
-    async def upload_file(self, 
-                         file_data: bytes, 
-                         filename: str, 
-                         user_id: int,
-                         file_type: str = 'documents') -> Dict[str, str]:
+    async def upload_file(self, file_data: bytes, file_name: str, content_type: str = 'application/octet-stream', 
+                         folder: str = 'uploads') -> Optional[str]:
         """
         Upload file to storage
         
         Args:
             file_data: File content as bytes
-            filename: Original filename
-            user_id: User ID for organization
-            file_type: Type of file (images, documents, videos, audio)
+            file_name: Original file name
+            content_type: MIME type of the file
+            folder: Folder/prefix for the file
         
         Returns:
-            Dictionary with file info (url, path, size, etc.)
+            Public URL of uploaded file or None if failed
         """
+        if not self.enabled:
+            logger.warning("File storage not available")
+            return None
+        
         try:
-            # Validate file
-            validation_result = await self._validate_file(file_data, filename, file_type)
-            if not validation_result['valid']:
-                raise ValueError(validation_result['error'])
+            # Generate unique file name with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            unique_name = f"{folder}/{timestamp}_{file_name}"
             
-            # Generate unique filename
-            file_hash = hashlib.md5(file_data).hexdigest()[:8]
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            file_ext = Path(filename).suffix.lower()
-            unique_filename = f"{user_id}_{timestamp}_{file_hash}{file_ext}"
-            
-            # Determine storage path
-            storage_path = f"{file_type}/{unique_filename}"
-            
-            # Upload to S3 or local storage
-            if self.s3_client:
-                file_url = await self._upload_to_s3(file_data, storage_path)
-            else:
-                file_url = await self._upload_to_local(file_data, storage_path)
-            
-            return {
-                'url': file_url,
-                'filename': unique_filename,
-                'original_filename': filename,
-                'path': storage_path,
-                'size': len(file_data),
-                'type': file_type,
-                'mime_type': mimetypes.guess_type(filename)[0],
-                'uploaded_at': datetime.now().isoformat(),
-                'user_id': user_id
-            }
-            
-        except Exception as e:
-            logger.error(f"File upload error: {e}")
-            raise
-    
-    async def _validate_file(self, file_data: bytes, filename: str, file_type: str) -> Dict[str, any]:
-        """Validate file before upload"""
-        # Check file size
-        if len(file_data) > self.max_file_size:
-            return {
-                'valid': False,
-                'error': f'File too large. Maximum size: {self.max_file_size // (1024*1024)}MB'
-            }
-        
-        # Check file extension
-        file_ext = Path(filename).suffix.lower()
-        if file_type not in self.allowed_extensions:
-            return {'valid': False, 'error': 'Invalid file type'}
-        
-        if file_ext not in self.allowed_extensions[file_type]:
-            return {
-                'valid': False,
-                'error': f'File extension not allowed for {file_type}. Allowed: {self.allowed_extensions[file_type]}'
-            }
-        
-        # Check file content (basic validation)
-        if not file_data or len(file_data) < 10:
-            return {'valid': False, 'error': 'File appears to be empty or corrupted'}
-        
-        return {'valid': True, 'error': None}
-    
-    async def _upload_to_s3(self, file_data: bytes, storage_path: str) -> str:
-        """Upload file to S3 storage"""
-        try:
             # Upload file
-            self.s3_client.put_object(
-                Bucket=Config.S3_BUCKET_NAME,
-                Key=storage_path,
-                Body=file_data,
-                ContentType=mimetypes.guess_type(storage_path)[0] or 'application/octet-stream'
+            await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.put_object(
+                    Bucket=Config.S3_BUCKET_NAME,
+                    Key=unique_name,
+                    Body=file_data,
+                    ContentType=content_type,
+                    ACL='public-read'  # Make file publicly accessible
+                )
             )
             
-            # Generate URL
+            # Generate public URL
             if Config.S3_ENDPOINT_URL:
-                # For MinIO or custom S3 endpoint
-                file_url = f"{Config.S3_ENDPOINT_URL}/{Config.S3_BUCKET_NAME}/{storage_path}"
+                # Custom endpoint (MinIO, etc.)
+                public_url = f"{Config.S3_ENDPOINT_URL.rstrip('/')}/{Config.S3_BUCKET_NAME}/{unique_name}"
             else:
-                # For AWS S3
-                file_url = f"https://{Config.S3_BUCKET_NAME}.s3.{Config.S3_REGION}.amazonaws.com/{storage_path}"
+                # AWS S3
+                public_url = f"https://{Config.S3_BUCKET_NAME}.s3.{Config.S3_REGION}.amazonaws.com/{unique_name}"
             
-            logger.info(f"File uploaded to S3: {storage_path}")
-            return file_url
-            
-        except ClientError as e:
-            logger.error(f"S3 upload error: {e}")
-            raise
-    
-    async def _upload_to_local(self, file_data: bytes, storage_path: str) -> str:
-        """Upload file to local storage"""
-        try:
-            file_path = self.local_storage_path / storage_path
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Write file
-            with open(file_path, 'wb') as f:
-                f.write(file_data)
-            
-            # Generate local URL (would need a web server to serve these)
-            file_url = f"/uploads/{storage_path}"
-            
-            logger.info(f"File uploaded locally: {storage_path}")
-            return file_url
+            logger.info(f"File uploaded successfully: {unique_name}")
+            return public_url
             
         except Exception as e:
-            logger.error(f"Local upload error: {e}")
-            raise
+            logger.error(f"File upload failed: {e}")
+            return None
     
-    async def delete_file(self, file_path: str) -> bool:
-        """Delete file from storage"""
+    async def upload_user_file(self, user_id: int, file_data: bytes, file_name: str, 
+                              file_type: str = 'document') -> Optional[str]:
+        """
+        Upload user-specific file (profile pictures, documents, etc.)
+        
+        Args:
+            user_id: User ID
+            file_data: File content
+            file_name: Original file name
+            file_type: Type of file (profile, document, product_image, etc.)
+        
+        Returns:
+            Public URL of uploaded file
+        """
+        folder = f"users/{user_id}/{file_type}"
+        
+        # Determine content type
+        content_type = self._get_content_type(file_name)
+        
+        return await self.upload_file(file_data, file_name, content_type, folder)
+    
+    async def upload_shop_file(self, shop_id: str, file_data: bytes, file_name: str, 
+                              file_type: str = 'product') -> Optional[str]:
+        """
+        Upload shop-specific file (product images, shop logo, etc.)
+        
+        Args:
+            shop_id: Shop ID
+            file_data: File content
+            file_name: Original file name
+            file_type: Type of file (product, logo, banner, etc.)
+        
+        Returns:
+            Public URL of uploaded file
+        """
+        folder = f"shops/{shop_id}/{file_type}"
+        
+        # Determine content type
+        content_type = self._get_content_type(file_name)
+        
+        return await self.upload_file(file_data, file_name, content_type, folder)
+    
+    async def delete_file(self, file_url: str) -> bool:
+        """
+        Delete file from storage
+        
+        Args:
+            file_url: Public URL of the file to delete
+        
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        if not self.enabled:
+            return False
+        
         try:
-            if self.s3_client:
-                self.s3_client.delete_object(
-                    Bucket=Config.S3_BUCKET_NAME,
-                    Key=file_path
-                )
-            else:
-                local_path = self.local_storage_path / file_path
-                if local_path.exists():
-                    local_path.unlink()
+            # Extract key from URL
+            key = self._extract_key_from_url(file_url)
+            if not key:
+                return False
             
-            logger.info(f"File deleted: {file_path}")
+            await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.delete_object(
+                    Bucket=Config.S3_BUCKET_NAME,
+                    Key=key
+                )
+            )
+            
+            logger.info(f"File deleted successfully: {key}")
             return True
             
         except Exception as e:
-            logger.error(f"File deletion error: {e}")
+            logger.error(f"File deletion failed: {e}")
             return False
     
-    async def get_file(self, file_path: str) -> Optional[bytes]:
-        """Retrieve file content from storage"""
-        try:
-            if self.s3_client:
-                response = self.s3_client.get_object(
-                    Bucket=Config.S3_BUCKET_NAME,
-                    Key=file_path
-                )
-                return response['Body'].read()
-            else:
-                local_path = self.local_storage_path / file_path
-                if local_path.exists():
-                    return local_path.read_bytes()
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"File retrieval error: {e}")
-            return None
-    
-    async def generate_presigned_url(self, file_path: str, expiration: int = 3600) -> Optional[str]:
-        """Generate presigned URL for direct file access (S3 only)"""
-        if not self.s3_client:
-            logger.warning("Presigned URLs not available for local storage")
+    async def generate_presigned_url(self, file_key: str, expiration: int = 3600) -> Optional[str]:
+        """
+        Generate presigned URL for temporary access to private files
+        
+        Args:
+            file_key: S3 object key
+            expiration: URL expiration time in seconds
+        
+        Returns:
+            Presigned URL or None if failed
+        """
+        if not self.enabled:
             return None
         
         try:
-            url = self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': Config.S3_BUCKET_NAME, 'Key': file_path},
-                ExpiresIn=expiration
+            url = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': Config.S3_BUCKET_NAME, 'Key': file_key},
+                    ExpiresIn=expiration
+                )
             )
+            
             return url
             
-        except ClientError as e:
-            logger.error(f"Presigned URL generation error: {e}")
+        except Exception as e:
+            logger.error(f"Presigned URL generation failed: {e}")
             return None
     
-    async def list_user_files(self, user_id: int, file_type: Optional[str] = None) -> List[Dict]:
-        """List files uploaded by a specific user"""
+    async def list_user_files(self, user_id: int, file_type: str = None) -> list:
+        """
+        List files for a specific user
+        
+        Args:
+            user_id: User ID
+            file_type: Optional file type filter
+        
+        Returns:
+            List of file information dictionaries
+        """
+        if not self.enabled:
+            return []
+        
         try:
-            files = []
+            prefix = f"users/{user_id}/"
+            if file_type:
+                prefix += f"{file_type}/"
             
-            if self.s3_client:
-                # List from S3
-                prefix = f"{file_type}/" if file_type else ""
-                response = self.s3_client.list_objects_v2(
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.list_objects_v2(
                     Bucket=Config.S3_BUCKET_NAME,
                     Prefix=prefix
                 )
-                
-                for obj in response.get('Contents', []):
-                    key = obj['Key']
-                    if key.startswith(f"{file_type}/{user_id}_") if file_type else str(user_id) in key:
-                        files.append({
-                            'path': key,
-                            'size': obj['Size'],
-                            'modified': obj['LastModified'].isoformat(),
-                            'url': f"https://{Config.S3_BUCKET_NAME}.s3.{Config.S3_REGION}.amazonaws.com/{key}"
-                        })
-            else:
-                # List from local storage
-                search_paths = [self.local_storage_path / file_type] if file_type else [self.local_storage_path]
-                
-                for search_path in search_paths:
-                    if search_path.exists():
-                        for file_path in search_path.rglob(f"{user_id}_*"):
-                            if file_path.is_file():
-                                stat = file_path.stat()
-                                files.append({
-                                    'path': str(file_path.relative_to(self.local_storage_path)),
-                                    'size': stat.st_size,
-                                    'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                                    'url': f"/uploads/{file_path.relative_to(self.local_storage_path)}"
-                                })
+            )
+            
+            files = []
+            for obj in response.get('Contents', []):
+                files.append({
+                    'key': obj['Key'],
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'],
+                    'url': self._generate_public_url(obj['Key'])
+                })
             
             return files
             
         except Exception as e:
-            logger.error(f"File listing error: {e}")
+            logger.error(f"File listing failed: {e}")
             return []
     
-    async def get_storage_stats(self) -> Dict[str, any]:
-        """Get storage usage statistics"""
+    async def get_storage_usage(self, prefix: str = '') -> Dict[str, Any]:
+        """
+        Get storage usage statistics
+        
+        Args:
+            prefix: Optional prefix to filter objects
+        
+        Returns:
+            Dictionary with usage statistics
+        """
+        if not self.enabled:
+            return {'total_size': 0, 'file_count': 0}
+        
         try:
-            stats = {
-                'total_files': 0,
-                'total_size': 0,
-                'by_type': {},
-                'storage_backend': 'S3' if self.s3_client else 'Local'
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.list_objects_v2(
+                    Bucket=Config.S3_BUCKET_NAME,
+                    Prefix=prefix
+                )
+            )
+            
+            total_size = 0
+            file_count = 0
+            
+            for obj in response.get('Contents', []):
+                total_size += obj['Size']
+                file_count += 1
+            
+            return {
+                'total_size': total_size,
+                'file_count': file_count,
+                'total_size_mb': round(total_size / (1024 * 1024), 2)
             }
             
-            if self.s3_client:
-                # Get S3 stats
-                response = self.s3_client.list_objects_v2(Bucket=Config.S3_BUCKET_NAME)
-                
-                for obj in response.get('Contents', []):
-                    stats['total_files'] += 1
-                    stats['total_size'] += obj['Size']
-                    
-                    # Categorize by type
-                    file_type = obj['Key'].split('/')[0] if '/' in obj['Key'] else 'other'
-                    if file_type not in stats['by_type']:
-                        stats['by_type'][file_type] = {'count': 0, 'size': 0}
-                    stats['by_type'][file_type]['count'] += 1
-                    stats['by_type'][file_type]['size'] += obj['Size']
-            else:
-                # Get local stats
-                for file_path in self.local_storage_path.rglob('*'):
-                    if file_path.is_file():
-                        stats['total_files'] += 1
-                        size = file_path.stat().st_size
-                        stats['total_size'] += size
-                        
-                        # Categorize by parent directory
-                        file_type = file_path.parent.name
-                        if file_type not in stats['by_type']:
-                            stats['by_type'][file_type] = {'count': 0, 'size': 0}
-                        stats['by_type'][file_type]['count'] += 1
-                        stats['by_type'][file_type]['size'] += size
-            
-            return stats
-            
         except Exception as e:
-            logger.error(f"Storage stats error: {e}")
-            return {'error': str(e)}
+            logger.error(f"Storage usage calculation failed: {e}")
+            return {'total_size': 0, 'file_count': 0}
     
-    def format_file_size(self, size_bytes: int) -> str:
-        """Format file size in human readable format"""
-        if size_bytes == 0:
-            return "0 B"
+    def _get_content_type(self, file_name: str) -> str:
+        """Get content type based on file extension"""
+        extension = file_name.lower().split('.')[-1] if '.' in file_name else ''
         
-        size_names = ["B", "KB", "MB", "GB", "TB"]
-        import math
-        i = int(math.floor(math.log(size_bytes, 1024)))
-        p = math.pow(1024, i)
-        s = round(size_bytes / p, 2)
-        return f"{s} {size_names[i]}"
+        content_types = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'pdf': 'application/pdf',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'txt': 'text/plain',
+            'zip': 'application/zip',
+            'mp4': 'video/mp4',
+            'mp3': 'audio/mpeg'
+        }
+        
+        return content_types.get(extension, 'application/octet-stream')
     
-    def is_s3_configured(self) -> bool:
-        """Check if S3 is properly configured"""
-        return self.s3_client is not None
-    
-    async def health_check(self) -> Dict[str, any]:
-        """Perform health check on storage service"""
+    def _extract_key_from_url(self, file_url: str) -> Optional[str]:
+        """Extract S3 object key from public URL"""
         try:
-            if self.s3_client:
-                # Test S3 connection
-                self.s3_client.head_bucket(Bucket=Config.S3_BUCKET_NAME)
-                return {
-                    'status': 'healthy',
-                    'backend': 'S3',
-                    'bucket': Config.S3_BUCKET_NAME,
-                    'timestamp': datetime.now().isoformat()
-                }
+            if Config.S3_ENDPOINT_URL and Config.S3_ENDPOINT_URL in file_url:
+                # Custom endpoint
+                return file_url.split(f"/{Config.S3_BUCKET_NAME}/")[-1]
+            elif 's3.' in file_url and 'amazonaws.com' in file_url:
+                # AWS S3
+                return file_url.split(f"{Config.S3_BUCKET_NAME}/")[-1]
             else:
-                # Check local storage
-                if self.local_storage_path.exists() and os.access(self.local_storage_path, os.W_OK):
-                    return {
-                        'status': 'healthy',
-                        'backend': 'Local',
-                        'path': str(self.local_storage_path),
-                        'timestamp': datetime.now().isoformat()
-                    }
-                else:
-                    return {
-                        'status': 'error',
-                        'error': 'Local storage path not writable',
-                        'timestamp': datetime.now().isoformat()
-                    }
-                    
+                return None
+        except:
+            return None
+    
+    def _generate_public_url(self, key: str) -> str:
+        """Generate public URL for an S3 object key"""
+        if Config.S3_ENDPOINT_URL:
+            return f"{Config.S3_ENDPOINT_URL.rstrip('/')}/{Config.S3_BUCKET_NAME}/{key}"
+        else:
+            return f"https://{Config.S3_BUCKET_NAME}.s3.{Config.S3_REGION}.amazonaws.com/{key}"
+    
+    def is_enabled(self) -> bool:
+        """Check if file storage is enabled and available"""
+        return self.enabled
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform health check on file storage service"""
+        if not self.enabled:
+            return {
+                'status': 'disabled',
+                'message': 'File storage service is disabled'
+            }
+        
+        try:
+            # Try to list bucket contents (limited)
+            await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.list_objects_v2(
+                    Bucket=Config.S3_BUCKET_NAME,
+                    MaxKeys=1
+                )
+            )
+            
+            return {
+                'status': 'healthy',
+                'message': 'File storage service is operational',
+                'bucket': Config.S3_BUCKET_NAME,
+                'endpoint': Config.S3_ENDPOINT_URL or 'AWS S3'
+            }
+            
         except Exception as e:
             return {
                 'status': 'error',
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
+                'message': f'File storage service error: {str(e)}'
             }
 
-# Global file storage service instance
+# Global file storage instance
 file_storage = FileStorageService()

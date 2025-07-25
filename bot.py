@@ -389,21 +389,7 @@ async def callback_handler(client: Client, callback_query: CallbackQuery):
         elif data.startswith('support_'):
             await handle_support_callbacks(client, callback_query)
         elif data == 'support_contact':
-            user = await db_manager.users.get_user(user_id)
-            user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
-            
-            # AI-powered support introduction
-            support_text = translator.get_text('ai_support_intro', user_lang)
-            keyboard = Keyboards.ai_support_keyboard(user_lang)
-            
-            await callback_query.edit_message_text(
-                support_text,
-                reply_markup=keyboard,
-                parse_mode=ParseMode.MARKDOWN
-            )
-            
-            # Set user in AI support mode
-            user_states[user_id] = 'ai_support'
+            await SupportHandler.show_support_menu(client, callback_query)
         elif data.startswith('ai_'):
             await handle_ai_support_callbacks(client, callback_query)
         else:
@@ -531,12 +517,22 @@ async def handle_support_callbacks(client: Client, callback_query: CallbackQuery
     """Handle support-related callbacks"""
     try:
         data = callback_query.data
-        user_id = callback_query.from_user.id
         
-        if data == 'support_faq':
-            await callback_query.answer("FAQ در حال توسعه است")
-        elif data == 'support_ticket':
-            await callback_query.answer("سیستم تیکت در حال توسعه است")
+        if data == 'support_menu':
+            await SupportHandler.show_support_menu(client, callback_query)
+        elif data == 'support_ai':
+            await SupportHandler.start_ai_support(client, callback_query)
+        elif data == 'support_human':
+            await SupportHandler.contact_human_support(client, callback_query)
+        elif data == 'support_features':
+            # Feature help with AI
+            await SupportHandler.get_feature_help(client, callback_query)
+        elif data == 'support_plans':
+            await SupportHandler.suggest_plan_upgrade(client, callback_query)
+        elif data == 'support_analyze':
+            await SupportHandler.analyze_user_issue(client, callback_query)
+        else:
+            await callback_query.answer("گزینه پشتیبانی نامشخص")
             
     except Exception as e:
         logger.error(f"Support callback error: {e}")
@@ -695,7 +691,10 @@ async def text_message_handler(client: Client, message: Message):
         user_id = message.from_user.id
         text = sanitize_input(message.text)
         
-        # Check if user is in AI support mode
+        # Check if user is in any support mode
+        await handle_support_text_messages(client, message)
+        
+        # Check if user is in AI support mode (fallback)
         if user_states.get(user_id) == 'ai_support':
             await handle_ai_support_message(client, message, text)
             return

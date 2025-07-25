@@ -1,387 +1,357 @@
 """
-AI Service for CodeRoot Bot - Intelligent Support System
-Integrates with Liara AI (Gemini) for contextual support
+AI Service for CodeRoot Bot
+Integrates with Liara AI API (Gemini 2.0 Flash) for intelligent support
 """
 
 import asyncio
-import logging
-from typing import Dict, List, Optional, Any
-from openai import AsyncOpenAI
-from datetime import datetime
 import json
-
+import logging
+from typing import Dict, Any, Optional, List
+from openai import OpenAI
 from config import Config
-from utils.language import Translator
 
 logger = logging.getLogger(__name__)
 
 class AIService:
-    """AI Service for intelligent customer support using Gemini model"""
+    """AI Service for intelligent support and assistance"""
     
     def __init__(self):
-        """Initialize AI Service with Liara AI endpoint"""
-        self.client = None
-        self.translator = Translator()
-        self.context_knowledge = self._build_coderoot_context()
-        self._initialize_client()
+        """Initialize AI service with Liara credentials"""
+        self.client = OpenAI(
+            base_url="https://ai.liara.ir/api/v1/687e3da1990c24f61dae6d13",
+            api_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiI2ODdhNzhmZjI3NGUxYzRlNjgzZTEwZTkiLCJ0eXBlIjoiYXV0aCIsImlhdCI6MTc1MzEwMzg3Nn0.EiwQySwDwWXZn9BLEbKaNoClUE-Ndz_6Xl4K1J5W_cE"
+        )
+        self.model = "google/gemini-2.0-flash-001"
+        self.context_knowledge = self._build_context_knowledge()
     
-    def _initialize_client(self):
-        """Initialize OpenAI client with Liara AI endpoint"""
-        try:
-            if not Config.AI_API_KEY or not Config.AI_API_BASE_URL:
-                logger.warning("AI service disabled - missing API credentials")
-                return
-                
-            self.client = AsyncOpenAI(
-                base_url=Config.AI_API_BASE_URL,
-                api_key=Config.AI_API_KEY,
-            )
-            logger.info("AI Service initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize AI service: {e}")
-            self.client = None
-    
-    def _build_coderoot_context(self) -> str:
-        """Build comprehensive knowledge base about CodeRoot for AI training"""
-        context = """
-# CodeRoot Bot - Complete Knowledge Base
+    def _build_context_knowledge(self) -> str:
+        """Build comprehensive context about CodeRoot bot features"""
+        return """
+CodeRoot Bot - Complete Feature Guide:
 
-## What is CodeRoot?
-CodeRoot is a Telegram mother bot that allows users to create their own individual shop bots. Users can register, choose subscription plans, and manage their online stores through Telegram.
+🤖 ABOUT CODEROOT:
+CodeRoot is a Telegram bot that allows users to create their own online shops. It's a "mother bot" that generates individual shop bots for each seller.
 
-## Core Features:
-1. **Shop Creation System**
-   - Users register and create their own shop bots
-   - Choose from 3 subscription plans: Free, Professional, VIP
-   - Manual card-to-card payment system
-   - Shop information registration
+👥 USER TYPES:
+1. Sellers: Create and manage their own shops
+2. Buyers: Purchase from seller shops
+3. Admin (HADI): Manages the entire platform
 
-2. **Subscription Plans:**
-   - **Free Plan**: Up to 10 products, fixed buttons, 5% commission, Bale payment gateway
-   - **Professional Plan**: Up to 200 products, advanced reports, welcome messages, custom ads, 5% commission (20,000 Toman/month)
-   - **VIP Plan**: Unlimited products, dedicated payment gateway, no commission, special ads, custom buttons (60,000 Toman/month)
+🏪 SHOP CREATION PROCESS:
+1. User starts with /start command
+2. Selects language (Persian/English/Arabic)
+3. Must join mandatory channel
+4. Creates shop with plan selection
+5. Makes payment (card-to-card)
+6. Gets approved by admin
+7. Receives their own shop bot
 
-3. **User Features:**
-   - Multi-language support (Persian, English, Arabic)
-   - Product management (add, edit, delete)
-   - Sales reports and analytics
-   - Order management
-   - Referral system with dedicated invitation links
-   - Plan renewal and upgrades
+📋 SUBSCRIPTION PLANS:
+🆓 FREE PLAN:
+- Up to 10 products
+- Fixed buttons only
+- Basic reports
+- 5% commission on sales
+- Bale payment gateway
 
-4. **Admin Features:**
-   - Shop approval and management
-   - Subscription management
-   - Financial reports and commission tracking
-   - Broadcast messaging
-   - User and shop analytics
+💼 PROFESSIONAL PLAN (20,000 Toman/month):
+- Up to 200 products
+- Advanced reporting
+- Auto-welcome messages
+- Custom advertisements
+- 5% commission on sales
+- Better dashboard
 
-5. **Technical Requirements:**
-   - Mandatory channel membership before accessing shop panel
-   - Automatic sub-bot creation for each shop
-   - Plan renewal reminders
-   - Email notifications
-   - Secure payment processing
+👑 VIP PLAN (60,000 Toman/month):
+- Unlimited products
+- Dedicated payment gateway
+- Full & smart reports
+- Advanced auto-messages
+- Advanced discount system
+- Special advertisements
+- Custom buttons
+- 0% commission (NO FEES!)
 
-## Payment Information:
-- Card Number: 6037-9977-7766-5544
-- Card Holder: حادی
-- Manual verification required for all payments
+🛠️ SELLER FEATURES:
+- Add/Edit/Delete products
+- View product lists
+- Sales reports & analytics
+- Order management
+- Plan upgrades/renewals
+- Auto-welcome messages (Pro+)
+- Custom shop branding
 
-## Commission Structure:
-- Free & Professional Plans: 5% commission on all sales
-- VIP Plan: 0% commission
+👑 ADMIN FEATURES (HADI):
+- Approve/reject new shops
+- View all seller data
+- Manage subscriptions
+- Financial reports & commissions
+- Broadcast messages
+- Sub-bot management
+- Platform settings
 
-## Contact & Support:
-- Main Channel: @coderoot_channel
-- Admin Contact: @hadi_admin
-- Support available in Persian, English, and Arabic
+🎁 REFERRAL SYSTEM:
+- Each user gets unique referral link
+- Earn commissions from referrals
+- Multi-level referral tracking
+- Bonus rewards for active referrers
 
-## Common Issues & Solutions:
-1. **Bot not responding**: Check channel membership first
-2. **Payment issues**: Contact admin with payment screenshot
-3. **Shop creation problems**: Ensure all required information is provided
-4. **Plan upgrades**: Contact admin for manual processing
+🌍 LANGUAGE SUPPORT:
+- Persian (فارسی) - Default
+- English 
+- Arabic (العربية)
+- Auto-detection and switching
 
-## Revenue Model:
-- Monthly subscription fees from sellers
-- 5% commission on sales (Free/Pro plans)
-- Plan upgrade fees
+💰 PAYMENT SYSTEM:
+- Manual card-to-card verification
+- Admin approval required
+- Commission tracking
+- Automated billing reminders
 
-Always respond in the user's preferred language (Persian, English, or Arabic) and provide helpful, accurate information about CodeRoot features and services.
+🔧 TECHNICAL FEATURES:
+- MongoDB database
+- Redis caching
+- Email notifications
+- Excel report generation
+- Security & validation
+- Analytics tracking
+- Backup systems
+
+🆘 SUPPORT TOPICS:
+1. Shop creation help
+2. Plan comparisons
+3. Payment issues
+4. Product management
+5. Order tracking
+6. Technical problems
+7. Account issues
+8. Feature requests
+
+📞 CONTACT INFO:
+- Support through bot messages
+- Admin contact: @hadi_admin
+- Main channel: @coderoot_channel
+
+🎯 REVENUE MODEL:
+- Monthly subscriptions
+- 5% commission (Free & Pro plans)
+- 0% commission (VIP plan)
+- Referral bonuses
 """
-        return context
-    
-    async def get_support_response(self, user_message: str, user_language: str = 'fa', user_context: Dict = None) -> str:
-        """
-        Get AI-powered support response for user queries
-        
-        Args:
-            user_message: User's question or issue
-            user_language: User's preferred language (fa/en/ar)
-            user_context: Additional context about the user (plan, shop status, etc.)
-        
-        Returns:
-            AI-generated support response in user's language
-        """
-        if not self.client:
-            return self._get_fallback_response(user_message, user_language)
-        
+
+    async def get_support_response(self, user_message: str, user_language: str = 'fa', context: Optional[Dict] = None) -> str:
+        """Get AI-powered support response"""
         try:
-            # Build context-aware prompt
-            system_prompt = self._build_system_prompt(user_language, user_context)
-            
-            # Create conversation messages
+            # Build the conversation context
+            system_prompt = f"""
+You are CodeRoot AI Assistant, an expert support agent for the CodeRoot Telegram bot platform.
+
+CONTEXT KNOWLEDGE:
+{self.context_knowledge}
+
+RESPONSE GUIDELINES:
+1. Always respond in {self._get_language_name(user_language)} language
+2. Be helpful, professional, and friendly
+3. Provide step-by-step instructions when needed
+4. Reference specific bot features and plans accurately
+5. If unsure, direct user to admin contact
+6. Keep responses concise but complete
+7. Use appropriate emojis for better UX
+8. Always provide actionable solutions
+
+USER CONTEXT: {json.dumps(context) if context else 'No additional context'}
+
+Respond to the user's question professionally and helpfully.
+"""
+
+            # Prepare messages for AI
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ]
-            
-            # Get AI response
-            response = await self.client.chat.completions.create(
-                model=Config.AI_MODEL,
-                messages=messages,
-                max_tokens=Config.AI_MAX_TOKENS,
-                temperature=Config.AI_TEMPERATURE,
-                top_p=0.9,
-                frequency_penalty=0.1,
-                presence_penalty=0.1
+
+            # Make API call to Liara AI
+            completion = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    max_tokens=800,
+                    temperature=0.7,
+                    top_p=0.9
+                )
             )
+
+            response = completion.choices[0].message.content
             
-            ai_response = response.choices[0].message.content.strip()
-            
-            # Log the interaction
-            logger.info(f"AI Support - User: {user_message[:50]}... | Response: {ai_response[:50]}...")
-            
-            return ai_response
-            
+            # Add footer with contact info
+            footer = self._get_footer(user_language)
+            return f"{response}\n\n{footer}"
+
         except Exception as e:
             logger.error(f"AI service error: {e}")
-            return self._get_fallback_response(user_message, user_language)
-    
-    def _build_system_prompt(self, user_language: str, user_context: Dict = None) -> str:
-        """Build system prompt with CodeRoot context and user information"""
-        
+            return self._get_fallback_response(user_language)
+
+    async def get_feature_explanation(self, feature: str, user_language: str = 'fa') -> str:
+        """Get detailed explanation of a specific feature"""
+        feature_prompt = f"""
+Explain the '{feature}' feature of CodeRoot bot in detail.
+Include:
+1. What it does
+2. How to use it
+3. Which plans support it
+4. Step-by-step instructions
+5. Common issues and solutions
+
+Respond in {self._get_language_name(user_language)} language.
+"""
+
+        try:
+            completion = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": f"You are CodeRoot AI Assistant.\n\n{self.context_knowledge}"},
+                        {"role": "user", "content": feature_prompt}
+                    ],
+                    max_tokens=1000,
+                    temperature=0.5
+                )
+            )
+
+            return completion.choices[0].message.content
+
+        except Exception as e:
+            logger.error(f"Feature explanation error: {e}")
+            return self._get_fallback_response(user_language)
+
+    async def analyze_user_issue(self, issue_description: str, user_data: Dict, user_language: str = 'fa') -> str:
+        """Analyze user issue and provide targeted solution"""
+        analysis_prompt = f"""
+ISSUE ANALYSIS REQUEST:
+User Issue: {issue_description}
+User Data: {json.dumps(user_data)}
+
+Please analyze this issue and provide:
+1. Likely cause of the problem
+2. Step-by-step solution
+3. Prevention tips
+4. When to contact admin
+
+Focus on CodeRoot bot specific solutions.
+Respond in {self._get_language_name(user_language)} language.
+"""
+
+        try:
+            completion = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": f"You are CodeRoot Technical Support AI.\n\n{self.context_knowledge}"},
+                        {"role": "user", "content": analysis_prompt}
+                    ],
+                    max_tokens=1200,
+                    temperature=0.3
+                )
+            )
+
+            return completion.choices[0].message.content
+
+        except Exception as e:
+            logger.error(f"Issue analysis error: {e}")
+            return self._get_fallback_response(user_language)
+
+    async def suggest_plan_upgrade(self, current_plan: str, user_needs: str, user_language: str = 'fa') -> str:
+        """Suggest appropriate plan upgrade based on user needs"""
+        upgrade_prompt = f"""
+PLAN RECOMMENDATION REQUEST:
+Current Plan: {current_plan}
+User Needs: {user_needs}
+
+Based on CodeRoot's plan features, recommend:
+1. Best plan for their needs
+2. Why this plan is suitable
+3. Cost-benefit analysis
+4. Migration process
+5. Timeline for upgrade
+
+Available plans: Free (10 products, 5% commission), Professional (200 products, 5% commission, 20k Toman), VIP (unlimited, 0% commission, 60k Toman)
+
+Respond in {self._get_language_name(user_language)} language.
+"""
+
+        try:
+            completion = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": f"You are CodeRoot Sales Assistant AI.\n\n{self.context_knowledge}"},
+                        {"role": "user", "content": upgrade_prompt}
+                    ],
+                    max_tokens=1000,
+                    temperature=0.4
+                )
+            )
+
+            return completion.choices[0].message.content
+
+        except Exception as e:
+            logger.error(f"Plan suggestion error: {e}")
+            return self._get_fallback_response(user_language)
+
+    def _get_language_name(self, lang_code: str) -> str:
+        """Get full language name from code"""
         language_names = {
-            'fa': 'فارسی (Persian)',
+            'fa': 'Persian (فارسی)',
             'en': 'English',
-            'ar': 'العربية (Arabic)'
+            'ar': 'Arabic (العربية)'
         }
-        
-        user_info = ""
-        if user_context:
-            user_info = f"""
-User Context:
-- Plan: {user_context.get('plan', 'Unknown')}
-- Shop Status: {user_context.get('shop_status', 'Unknown')}
-- Registration Date: {user_context.get('created_at', 'Unknown')}
-- Last Activity: {user_context.get('last_activity', 'Unknown')}
-"""
-        
-        system_prompt = f"""
-You are an intelligent customer support assistant for CodeRoot Bot, a Telegram platform for creating shop bots.
+        return language_names.get(lang_code, 'Persian (فارسی)')
 
-{self.context_knowledge}
+    def _get_footer(self, language: str) -> str:
+        """Get support footer in specified language"""
+        footers = {
+            'fa': "🆘 نیاز به کمک بیشتر؟ با ادمین تماس بگیرید: @hadi_admin",
+            'en': "🆘 Need more help? Contact admin: @hadi_admin",
+            'ar': "🆘 تحتاج المزيد من المساعدة؟ اتصل بالمشرف: @hadi_admin"
+        }
+        return footers.get(language, footers['fa'])
 
-{user_info}
-
-IMPORTANT INSTRUCTIONS:
-1. Always respond in {language_names.get(user_language, 'Persian')} language
-2. Be helpful, professional, and friendly
-3. Provide specific solutions and actionable advice
-4. If you don't know something, direct the user to contact admin @hadi_admin
-5. Include relevant emojis to make responses engaging
-6. Keep responses concise but comprehensive
-7. Always prioritize user satisfaction and problem resolution
-
-Current conversation language: {user_language}
-"""
-        return system_prompt
-    
-    def _get_fallback_response(self, user_message: str, user_language: str) -> str:
-        """Provide fallback response when AI service is unavailable"""
-        fallback_responses = {
+    def _get_fallback_response(self, language: str) -> str:
+        """Get fallback response when AI fails"""
+        fallbacks = {
             'fa': """
-🤖 سیستم پشتیبانی هوشمند موقتاً در دسترس نیست.
+🤖 متاسفانه در حال حاضر سیستم هوش مصنوعی دردسترس نیست.
 
-📞 لطفاً با پشتیبانی تماس بگیرید:
+لطفاً سوال خود را مستقیماً با ادمین مطرح کنید:
 👤 @hadi_admin
 
-یا از طریق کانال اصلی:
-📢 @coderoot_channel
-
-⏰ پاسخگویی: ۹ صبح تا ۱۲ شب
+یا از منوی راهنما استفاده کنید:
+📱 /help
 """,
             'en': """
-🤖 Smart support system is temporarily unavailable.
+🤖 Unfortunately, the AI system is currently unavailable.
 
-📞 Please contact support:
+Please contact the admin directly:
 👤 @hadi_admin
 
-Or through main channel:
-📢 @coderoot_channel
-
-⏰ Response time: 9 AM to 12 AM
+Or use the help menu:
+📱 /help
 """,
             'ar': """
-🤖 نظام الدعم الذكي غير متاح مؤقتاً.
+🤖 عذراً، نظام الذكاء الاصطناعي غير متاح حالياً.
 
-📞 يرجى الاتصال بالدعم:
+يرجى التواصل مع المشرف مباشرة:
 👤 @hadi_admin
 
-أو عبر القناة الرئيسية:
-📢 @coderoot_channel
-
-⏰ وقت الاستجابة: ٩ صباحاً إلى ١٢ منتصف الليل
+أو استخدم قائمة المساعدة:
+📱 /help
 """
         }
-        return fallback_responses.get(user_language, fallback_responses['fa'])
-    
-    async def analyze_user_intent(self, message: str, user_language: str) -> Dict[str, Any]:
-        """
-        Analyze user message to determine intent and extract key information
-        
-        Returns:
-            Dictionary with intent, confidence, and extracted entities
-        """
-        if not self.client:
-            return {"intent": "general_inquiry", "confidence": 0.5, "entities": {}}
-        
-        try:
-            analysis_prompt = f"""
-Analyze this user message and determine their intent. Respond with JSON only.
+        return fallbacks.get(language, fallbacks['fa'])
 
-Message: "{message}"
-Language: {user_language}
-
-Possible intents:
-- payment_issue
-- shop_creation
-- plan_upgrade
-- technical_problem
-- product_management
-- order_inquiry
-- general_inquiry
-- complaint
-
-Response format:
-{{
-    "intent": "intent_name",
-    "confidence": 0.95,
-    "entities": {{
-        "plan_mentioned": "free/pro/vip or null",
-        "urgency": "low/medium/high",
-        "topic": "brief description"
-    }}
-}}
-"""
-            
-            response = await self.client.chat.completions.create(
-                model=Config.AI_MODEL,
-                messages=[{"role": "user", "content": analysis_prompt}],
-                max_tokens=200,
-                temperature=0.3
-            )
-            
-            result = json.loads(response.choices[0].message.content.strip())
-            return result
-            
-        except Exception as e:
-            logger.error(f"Intent analysis error: {e}")
-            return {"intent": "general_inquiry", "confidence": 0.5, "entities": {}}
-    
-    async def generate_quick_replies(self, user_message: str, user_language: str) -> List[str]:
-        """Generate quick reply suggestions based on user message"""
-        if not self.client:
-            return self._get_default_quick_replies(user_language)
-        
-        try:
-            prompt = f"""
-Generate 3 quick reply options for this user message in {user_language}.
-Keep replies short (max 25 characters each).
-
-User message: "{user_message}"
-
-Format: Just return 3 lines, each with a quick reply.
-"""
-            
-            response = await self.client.chat.completions.create(
-                model=Config.AI_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=150,
-                temperature=0.7
-            )
-            
-            replies = response.choices[0].message.content.strip().split('\n')
-            return [reply.strip() for reply in replies if reply.strip()][:3]
-            
-        except Exception as e:
-            logger.error(f"Quick replies generation error: {e}")
-            return self._get_default_quick_replies(user_language)
-    
-    def _get_default_quick_replies(self, user_language: str) -> List[str]:
-        """Default quick replies when AI is unavailable"""
-        quick_replies = {
-            'fa': ['💬 ادامه چت', '📞 تماس با پشتیبانی', '🏠 منوی اصلی'],
-            'en': ['💬 Continue Chat', '📞 Contact Support', '🏠 Main Menu'],
-            'ar': ['💬 متابعة المحادثة', '📞 اتصل بالدعم', '🏠 القائمة الرئيسية']
-        }
-        return quick_replies.get(user_language, quick_replies['fa'])
-    
-    async def train_on_conversation(self, user_id: int, conversation_history: List[Dict]):
-        """
-        Store conversation for future AI training and improvement
-        This helps the AI learn from real user interactions
-        """
-        try:
-            training_data = {
-                'timestamp': datetime.now().isoformat(),
-                'user_id': user_id,
-                'conversation': conversation_history,
-                'language': conversation_history[-1].get('language', 'fa') if conversation_history else 'fa'
-            }
-            
-            # In a production environment, this would be stored in a database
-            # or sent to a training pipeline
-            logger.info(f"Conversation training data collected for user {user_id}")
-            
-        except Exception as e:
-            logger.error(f"Training data collection error: {e}")
-    
-    def is_available(self) -> bool:
-        """Check if AI service is available"""
-        return self.client is not None
-    
-    async def health_check(self) -> Dict[str, Any]:
-        """Perform health check on AI service"""
-        if not self.client:
-            return {
-                'status': 'unavailable',
-                'message': 'AI client not initialized',
-                'timestamp': datetime.now().isoformat()
-            }
-        
-        try:
-            # Test with a simple query
-            test_response = await self.client.chat.completions.create(
-                model=Config.AI_MODEL,
-                messages=[{"role": "user", "content": "Hello"}],
-                max_tokens=10
-            )
-            
-            return {
-                'status': 'healthy',
-                'model': Config.AI_MODEL,
-                'message': 'AI service operational',
-                'timestamp': datetime.now().isoformat()
-            }
-            
-        except Exception as e:
-            return {
-                'status': 'error',
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }
-
-# Global AI service instance
+# Initialize AI service instance
 ai_service = AIService()

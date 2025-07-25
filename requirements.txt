@@ -27,6 +27,7 @@ cryptography>=40.0.0,<46.0.0
 
 # Scheduling and Background Tasks
 schedule==1.2.0
+APScheduler==3.10.4
 celery==5.3.4
 
 # Monitoring and Logging
@@ -59,7 +60,7 @@ pydantic==2.5.0
 httpx==0.25.2
 
 # AI Integration
-openai==1.54.4
+openai==1.58.1
 
 # Task Queue
 rq==1.15.1

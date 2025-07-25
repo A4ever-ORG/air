@@ -77,11 +77,12 @@ class Config:
     DEFAULT_LANGUAGE = os.getenv('DEFAULT_LANGUAGE', 'fa')
     SUPPORTED_LANGUAGES = os.getenv('SUPPORTED_LANGUAGES', 'fa,en,ar').split(',')
     
-    # AI Support Configuration
-    AI_API_BASE_URL = os.getenv('AI_API_BASE_URL', '')
-    AI_API_KEY = os.getenv('AI_API_KEY', '')
+    # AI Service Configuration
+    AI_ENABLED = os.getenv('AI_ENABLED', 'true').lower() == 'true'
+    AI_API_BASE_URL = os.getenv('AI_API_BASE_URL', 'https://ai.liara.ir/api/v1/687e3da1990c24f61dae6d13')
+    AI_API_KEY = os.getenv('AI_API_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiI2ODdhNzhmZjI3NGUxYzRlNjgzZTEwZTkiLCJ0eXBlIjoiYXV0aCIsImlhdCI6MTc1MzEwMzg3Nn0.EiwQySwDwWXZn9BLEbKaNoClUE-Ndz_6Xl4K1J5W_cE')
     AI_MODEL = os.getenv('AI_MODEL', 'google/gemini-2.0-flash-001')
-    AI_MAX_TOKENS = int(os.getenv('AI_MAX_TOKENS', '2000'))
+    AI_MAX_TOKENS = int(os.getenv('AI_MAX_TOKENS', '1200'))
     AI_TEMPERATURE = float(os.getenv('AI_TEMPERATURE', '0.7'))
     
     # File Storage Configuration (S3/MinIO)

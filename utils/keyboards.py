@@ -816,3 +816,114 @@ class Keyboards:
             [InlineKeyboardButton(text['join'], url=f'https://t.me/{channel_username}')],
             [InlineKeyboardButton(text['check'], callback_data='check_membership')]
         ])
+    
+    @staticmethod
+    def support_menu_keyboard(language: str = 'fa') -> InlineKeyboardMarkup:
+        """Support menu keyboard"""
+        texts = {
+            'fa': {
+                'ai_support': '🤖 پشتیبانی هوشمند',
+                'human_support': '👨‍💼 پشتیبانی انسانی',
+                'feature_help': '📖 راهنمای ویژگی‌ها',
+                'plan_suggestions': '💡 پیشنهاد پلن',
+                'issue_analysis': '🔍 تحلیل مشکل',
+                'back': '🔙 بازگشت'
+            },
+            'en': {
+                'ai_support': '🤖 AI Support',
+                'human_support': '👨‍💼 Human Support',
+                'feature_help': '📖 Feature Guide',
+                'plan_suggestions': '💡 Plan Suggestions',
+                'issue_analysis': '🔍 Issue Analysis',
+                'back': '🔙 Back'
+            },
+            'ar': {
+                'ai_support': '🤖 الدعم الذكي',
+                'human_support': '👨‍💼 الدعم البشري',
+                'feature_help': '📖 دليل الميزات',
+                'plan_suggestions': '💡 اقتراحات الخطة',
+                'issue_analysis': '🔍 تحليل المشكلة',
+                'back': '🔙 العودة'
+            }
+        }
+        
+        text = texts.get(language, texts['fa'])
+        
+        return InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(text['ai_support'], callback_data='support_ai'),
+                InlineKeyboardButton(text['human_support'], callback_data='support_human')
+            ],
+            [
+                InlineKeyboardButton(text['feature_help'], callback_data='support_features'),
+                InlineKeyboardButton(text['plan_suggestions'], callback_data='support_plans')
+            ],
+            [
+                InlineKeyboardButton(text['issue_analysis'], callback_data='support_analyze')
+            ],
+            [
+                InlineKeyboardButton(text['back'], callback_data='main_menu')
+            ]
+        ])
+    
+    @staticmethod
+    def ai_support_keyboard(language: str = 'fa') -> InlineKeyboardMarkup:
+        """AI support keyboard"""
+        texts = {
+            'fa': {
+                'quick_help': '⚡ کمک سریع',
+                'detailed_help': '📝 کمک تفصیلی',
+                'back': '🔙 بازگشت'
+            },
+            'en': {
+                'quick_help': '⚡ Quick Help',
+                'detailed_help': '📝 Detailed Help',
+                'back': '🔙 Back'
+            },
+            'ar': {
+                'quick_help': '⚡ مساعدة سريعة',
+                'detailed_help': '📝 مساعدة مفصلة',
+                'back': '🔙 العودة'
+            }
+        }
+        
+        text = texts.get(language, texts['fa'])
+        
+        return InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(text['quick_help'], callback_data='ai_quick'),
+                InlineKeyboardButton(text['detailed_help'], callback_data='ai_detailed')
+            ],
+            [
+                InlineKeyboardButton(text['back'], callback_data='support_menu')
+            ]
+        ])
+    
+    @staticmethod
+    def human_support_keyboard(language: str = 'fa') -> InlineKeyboardMarkup:
+        """Human support keyboard"""
+        texts = {
+            'fa': {
+                'contact_admin': '📞 تماس با ادمین',
+                'back': '🔙 بازگشت'
+            },
+            'en': {
+                'contact_admin': '📞 Contact Admin',
+                'back': '🔙 Back'
+            },
+            'ar': {
+                'contact_admin': '📞 اتصال بالمشرف',
+                'back': '🔙 العودة'
+            }
+        }
+        
+        text = texts.get(language, texts['fa'])
+        
+        return InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(text['contact_admin'], url=f"https://t.me/hadi_admin")
+            ],
+            [
+                InlineKeyboardButton(text['back'], callback_data='support_menu')
+            ]
+        ])
