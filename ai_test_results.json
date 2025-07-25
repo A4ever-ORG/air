@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-07-25T07:24:36.250349",
+  "config": {
+    "ai_enabled": true,
+    "ai_base_url": "https://ai.liara.ir/api/v1/687e3da1990c24f61dae6d13",
+    "ai_model": "google/gemini-2.0-flash-001",
+    "ai_max_tokens": 1200,
+    "ai_temperature": 0.7
+  },
+  "results": {
+    "Connection Test": true,
+    "Persian Support": true,
+    "English Support": true,
+    "Arabic Support": true,
+    "Shop Support": false,
+    "Admin Assistance": true,
+    "Intent Analysis": true,
+    "Content Suggestions": true,
+    "Quick Replies": true,
+    "Conversation Flow": true,
+    "Feature Explanation": true
+  }
+}
