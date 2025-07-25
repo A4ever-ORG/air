@@ -927,3 +927,83 @@ class Keyboards:
                 InlineKeyboardButton(text['back'], callback_data='support_menu')
             ]
         ])
+    
+    @staticmethod
+    def support_menu_keyboard(language: str = 'fa') -> InlineKeyboardMarkup:
+        """Support menu keyboard"""
+        texts = {
+            'fa': {
+                'ai_support': '🤖 پشتیبانی هوشمند',
+                'human_support': '👤 پشتیبانی انسانی',
+                'faq': '❓ سوالات متداول',
+                'contact': '📞 تماس با ما',
+                'back': '🔙 بازگشت'
+            },
+            'en': {
+                'ai_support': '🤖 AI Support',
+                'human_support': '👤 Human Support',
+                'faq': '❓ FAQ',
+                'contact': '📞 Contact Us',
+                'back': '🔙 Back'
+            },
+            'ar': {
+                'ai_support': '🤖 الدعم الذكي',
+                'human_support': '👤 الدعم البشري',
+                'faq': '❓ الأسئلة الشائعة',
+                'contact': '📞 اتصل بنا',
+                'back': '🔙 العودة'
+            }
+        }
+        
+        text = texts.get(language, texts['fa'])
+        
+        return InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(text['ai_support'], callback_data='support_ai'),
+                InlineKeyboardButton(text['human_support'], callback_data='support_human')
+            ],
+            [
+                InlineKeyboardButton(text['faq'], callback_data='support_faq'),
+                InlineKeyboardButton(text['contact'], callback_data='support_contact')
+            ],
+            [
+                InlineKeyboardButton(text['back'], callback_data='main_menu')
+            ]
+        ])
+    
+    @staticmethod
+    def ai_support_keyboard(language: str = 'fa') -> InlineKeyboardMarkup:
+        """AI support conversation keyboard"""
+        texts = {
+            'fa': {
+                'new_question': '🆕 سوال جدید',
+                'human_support': '👤 انتقال به پشتیبانی انسانی',
+                'end_chat': '❌ پایان گفتگو',
+                'main_menu': '🏠 منوی اصلی'
+            },
+            'en': {
+                'new_question': '🆕 New Question',
+                'human_support': '👤 Transfer to Human Support',
+                'end_chat': '❌ End Chat',
+                'main_menu': '🏠 Main Menu'
+            },
+            'ar': {
+                'new_question': '🆕 سؤال جديد',
+                'human_support': '👤 نقل للدعم البشري',
+                'end_chat': '❌ إنهاء الدردشة',
+                'main_menu': '🏠 القائمة الرئيسية'
+            }
+        }
+        
+        text = texts.get(language, texts['fa'])
+        
+        return InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(text['new_question'], callback_data='ai_new_question'),
+                InlineKeyboardButton(text['human_support'], callback_data='ai_human_support')
+            ],
+            [
+                InlineKeyboardButton(text['end_chat'], callback_data='ai_end_chat'),
+                InlineKeyboardButton(text['main_menu'], callback_data='main_menu')
+            ]
+        ])

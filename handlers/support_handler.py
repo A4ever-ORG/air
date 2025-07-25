@@ -4,6 +4,7 @@ Handles support requests and integrates AI for intelligent responses
 """
 
 import logging
+from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
@@ -51,14 +52,36 @@ class SupportHandler:
             user = await db_manager.users.get_user(user_id)
             user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
             
-            support_states[user_id] = 'ai_support'
+            # Test AI connection first
+            if not await ai_service.test_ai_connection():
+                fallback_text = translator.get_text('ai_unavailable', user_lang)
+                keyboard = Keyboards.support_menu_keyboard(user_lang)
+                await callback_query.edit_message_text(fallback_text, reply_markup=keyboard)
+                return
             
-            ai_intro = translator.get_text('ai_support_intro', user_lang)
+            # Start AI conversation
+            welcome_text = translator.get_text('ai_support_welcome', user_lang)
+            ai_response = await ai_service.get_ai_response(
+                user_id, 
+                "سلام! من برای دریافت پشتیبانی هوشمند آماده هستم.", 
+                user_lang
+            )
+            
+            full_message = f"{welcome_text}\n\n🤖 **CodeRoot AI:**\n{ai_response}"
+            
+            # Set user state for AI conversation
+            support_states[user_id] = {
+                'mode': 'ai_chat',
+                'language': user_lang,
+                'started_at': datetime.now()
+            }
+            
             keyboard = Keyboards.ai_support_keyboard(user_lang)
             
             await callback_query.edit_message_text(
-                ai_intro,
-                reply_markup=keyboard
+                full_message,
+                reply_markup=keyboard,
+                parse_mode="Markdown"
             )
             
         except Exception as e:

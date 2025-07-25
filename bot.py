@@ -28,10 +28,9 @@ from utils.validation import Validation
 from utils.bot_utils import BotUtils
 from utils.notifications import NotificationManager
 from utils.security import Security
-from utils.language import Translator, Languages
-from services.ai_support import ai_support_manager
-from services.email_service import EmailService
+from utils.language import translator
 from services.ai_service import ai_service
+from services.email_service import EmailService
 from services.file_storage import file_storage
 from services.backup_service import BackupService, backup_service as global_backup_service
 
@@ -572,9 +571,36 @@ async def handle_ai_support_callbacks(client: Client, callback_query: CallbackQu
             # End AI support mode
             user_states.pop(user_id, None)
             
-        elif data == 'ai_end_support':
+        elif data == 'ai_new_question':
+            # Clear AI conversation history and start fresh
+            ai_service.clear_conversation_history(user_id)
+            welcome_text = translator.get_text('ai_support_welcome', user_lang)
+            keyboard = Keyboards.ai_support_keyboard(user_lang)
+            
+            await callback_query.edit_message_text(
+                welcome_text,
+                reply_markup=keyboard,
+                parse_mode="Markdown"
+            )
+            
+        elif data == 'ai_end_chat':
             # End AI support session
-            end_text = translator.get_text('ai_support_ended', user_lang)
+            end_text = translator.get_text('ai_support_ended', user_lang) if hasattr(translator, 'get_text') else "پایان گفتگوی هوشمند. از استفاده از CodeRoot متشکرم!"
+            keyboard = Keyboards.main_menu_keyboard(user_lang)
+            
+            # Clear support state
+            from handlers.support_handler import support_states
+            support_states.pop(user_id, None)
+            user_states.pop(user_id, None)
+            
+            await callback_query.edit_message_text(
+                end_text,
+                reply_markup=keyboard
+            )
+            
+        elif data == 'ai_end_support':
+            # End AI support session (legacy)
+            end_text = translator.get_text('ai_support_ended', user_lang) if hasattr(translator, 'get_text') else "پایان گفتگوی هوشمند. از استفاده از CodeRoot متشکرم!"
             keyboard = Keyboards.main_menu_keyboard(user_lang)
             
             await callback_query.edit_message_text(
@@ -732,7 +758,70 @@ async def text_message_handler(client: Client, message: Message):
         logger.error(f"Error in text message handler: {e}")
         await message.reply_text("خطایی رخ داد. لطفاً دوباره تلاش کنید.")
 
+async def handle_ai_conversation(client: Client, message: Message, user_lang: str):
+    """Handle AI conversation in support mode"""
+    try:
+        user_id = message.from_user.id
+        user_message = message.text.strip()
+        
+        # Show thinking indicator
+        thinking_text = translator.get_text('ai_thinking', user_lang) if hasattr(translator, 'get_text') else "🤔 در حال فکر..."
+        thinking_msg = await message.reply_text(thinking_text)
+        
+        # Get user context for better AI response
+        user = await db_manager.users.get_user(user_id)
+        user_context = {
+            'plan': user.get('subscription_plan', 'free') if user else 'free',
+            'shop_status': 'active' if user and user.get('shop_id') else 'none',
+            'registration_date': user.get('created_at') if user else None,
+            'language': user_lang
+        }
+        
+        # Get AI response
+        ai_response = await ai_service.get_ai_response(
+            user_id, 
+            user_message, 
+            user_lang, 
+            user_context
+        )
+        
+        # Delete thinking message and send AI response
+        await thinking_msg.delete()
+        
+        # Create response with AI branding
+        response_text = f"🤖 **CodeRoot AI:**\n\n{ai_response}"
+        
+        # Add quick action buttons
+        keyboard = Keyboards.ai_support_keyboard(user_lang)
+        
+        await message.reply_text(
+            response_text, 
+            reply_markup=keyboard,
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in AI conversation: {e}")
+        fallback_text = "متأسفانه خطایی رخ داد. لطفاً دوباره تلاش کنید یا با پشتیبانی انسانی تماس بگیرید."
+        keyboard = Keyboards.support_menu_keyboard(user_lang)
+        await message.reply_text(fallback_text, reply_markup=keyboard)
+
 async def handle_ai_support_message(client: Client, message: Message, user_message: str):
+    """Handle AI support conversation (Legacy)"""
+    try:
+        user_id = message.from_user.id
+        
+        # Get user info
+        user = await db_manager.users.get_user(user_id)
+        user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
+        
+        # Use the new AI conversation handler
+        await handle_ai_conversation(client, message, user_lang)
+        
+    except Exception as e:
+        logger.error(f"Error in legacy AI support: {e}")
+
+async def handle_ai_support_message_old(client: Client, message: Message, user_message: str):
     """Handle AI support conversation"""
     try:
         user_id = message.from_user.id
