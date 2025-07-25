@@ -21,8 +21,8 @@ jdatetime==4.1.0
 bcrypt==4.1.2
 cryptography>=40.0.0,<46.0.0
 
-# Image Processing
-pillow==10.1.0
+# Image Processing (using compatible versions)
+pillow>=9.0.0,<11.0.0
 qrcode==7.4.2
 
 # Background Tasks
@@ -30,14 +30,14 @@ schedule==1.2.0
 APScheduler==3.10.4
 
 # Data Processing
-pandas==2.1.4
+pandas>=2.0.0,<3.0.0
 openpyxl==3.1.2
 
 # HTTP Client
 httpx==0.25.2
 
 # Input Validation
-pydantic==2.5.0
+pydantic>=2.0.0,<3.0.0
 
-# AI Integration
-openai>=1.50.0,<2.0.0
+# AI Integration (single version, no conflicts)
+openai==1.58.1

@@ -1,19 +1,19 @@
 {
-  "platform": "docker",
+  "platform": "python",
+  "app": "coderoot-bot",
   "port": 8000,
-  "app": "coderoot-demo",
-  "image": "coderoot-demo:latest",
   "build": {
     "location": ".",
-    "dockerfile": "Dockerfile.liara"
+    "commands": [
+      "pip install --upgrade pip",
+      "pip install -r requirements.txt --no-cache-dir"
+    ]
   },
-  "healthCheck": {
-    "path": "/health",
-    "interval": 30
+  "run": {
+    "command": "python bot.py"
   },
-  "environments": {
-    "PYTHONPATH": "/app",
+  "environment": {
     "PYTHONUNBUFFERED": "1",
-    "DEMO_MODE": "true"
+    "PYTHONDONTWRITEBYTECODE": "1"
   }
 }
