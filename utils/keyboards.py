@@ -352,39 +352,127 @@ class Keyboards:
         ])
     
     @staticmethod
-    def pagination_keyboard(page: int, total_pages: int, prefix: str, language: str = 'fa') -> InlineKeyboardMarkup:
-        """Pagination keyboard"""
+    def pagination_keyboard(current_page: int, total_pages: int, callback_prefix: str, language: str = 'fa') -> InlineKeyboardMarkup:
+        """Pagination keyboard for lists"""
+        texts = {
+            'fa': {'prev': '◀️ قبلی', 'next': 'بعدی ▶️', 'page': 'صفحه'},
+            'en': {'prev': '◀️ Previous', 'next': 'Next ▶️', 'page': 'Page'},
+            'ar': {'prev': '◀️ السابق', 'next': 'التالي ▶️', 'page': 'صفحة'}
+        }
+        
+        text = texts.get(language, texts['fa'])
+        buttons = []
+        
+        if current_page > 1:
+            buttons.append(InlineKeyboardButton(
+                text['prev'], 
+                callback_data=f"{callback_prefix}_page_{current_page-1}"
+            ))
+        
+        buttons.append(InlineKeyboardButton(
+            f"{text['page']} {current_page}/{total_pages}",
+            callback_data="page_info"
+        ))
+        
+        if current_page < total_pages:
+            buttons.append(InlineKeyboardButton(
+                text['next'], 
+                callback_data=f"{callback_prefix}_page_{current_page+1}"
+            ))
+        
+        return InlineKeyboardMarkup([buttons])
+    
+    @staticmethod
+    def ai_support_keyboard(language: str = 'fa') -> InlineKeyboardMarkup:
+        """AI Support keyboard with quick options"""
         texts = {
             'fa': {
-                'prev': '◀️ قبلی',
-                'next': '▶️ بعدی',
-                'page': f'صفحه {page}/{total_pages}'
+                'shop_help': '🏪 کمک ایجاد فروشگاه',
+                'payment_help': '💰 مشکل پرداخت',
+                'plan_help': '📊 سوال درباره پلن‌ها',
+                'technical_help': '🔧 مشکل فنی',
+                'human_support': '👤 صحبت با پشتیبان انسانی',
+                'end_support': '❌ پایان پشتیبانی'
             },
             'en': {
-                'prev': '◀️ Previous',
-                'next': '▶️ Next',
-                'page': f'Page {page}/{total_pages}'
+                'shop_help': '🏪 Shop Creation Help',
+                'payment_help': '💰 Payment Issue',
+                'plan_help': '📊 Plans Question',
+                'technical_help': '🔧 Technical Issue',
+                'human_support': '👤 Talk to Human Support',
+                'end_support': '❌ End Support'
             },
             'ar': {
-                'prev': '◀️ السابق',
-                'next': '▶️ التالي',
-                'page': f'صفحة {page}/{total_pages}'
+                'shop_help': '🏪 مساعدة إنشاء المتجر',
+                'payment_help': '💰 مشكلة دفع',
+                'plan_help': '📊 سؤال حول الخطط',
+                'technical_help': '🔧 مشكلة تقنية',
+                'human_support': '👤 التحدث مع الدعم البشري',
+                'end_support': '❌ إنهاء الدعم'
             }
         }
         
         text = texts.get(language, texts['fa'])
         
-        buttons = []
+        return InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(text['shop_help'], callback_data='ai_help_shop'),
+                InlineKeyboardButton(text['payment_help'], callback_data='ai_help_payment')
+            ],
+            [
+                InlineKeyboardButton(text['plan_help'], callback_data='ai_help_plans'),
+                InlineKeyboardButton(text['technical_help'], callback_data='ai_help_technical')
+            ],
+            [
+                InlineKeyboardButton(text['human_support'], callback_data='ai_human_support')
+            ],
+            [
+                InlineKeyboardButton(text['end_support'], callback_data='ai_end_support')
+            ]
+        ])
+    
+    @staticmethod
+    def ai_response_keyboard(language: str = 'fa') -> InlineKeyboardMarkup:
+        """Keyboard for AI response interactions"""
+        texts = {
+            'fa': {
+                'helpful': '👍 مفید بود',
+                'not_helpful': '👎 مفید نبود',
+                'more_help': '❓ سوال بیشتر',
+                'human_support': '👤 پشتیبان انسانی',
+                'main_menu': '🏠 منوی اصلی'
+            },
+            'en': {
+                'helpful': '👍 Helpful',
+                'not_helpful': '👎 Not Helpful',
+                'more_help': '❓ More Questions',
+                'human_support': '👤 Human Support',
+                'main_menu': '🏠 Main Menu'
+            },
+            'ar': {
+                'helpful': '👍 مفيد',
+                'not_helpful': '👎 غير مفيد',
+                'more_help': '❓ المزيد من الأسئلة',
+                'human_support': '👤 الدعم البشري',
+                'main_menu': '🏠 القائمة الرئيسية'
+            }
+        }
         
-        if page > 1:
-            buttons.append(InlineKeyboardButton(text['prev'], callback_data=f'{prefix}_page_{page-1}'))
+        text = texts.get(language, texts['fa'])
         
-        buttons.append(InlineKeyboardButton(text['page'], callback_data='current_page'))
-        
-        if page < total_pages:
-            buttons.append(InlineKeyboardButton(text['next'], callback_data=f'{prefix}_page_{page+1}'))
-        
-        return InlineKeyboardMarkup([buttons])
+        return InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(text['helpful'], callback_data='ai_feedback_helpful'),
+                InlineKeyboardButton(text['not_helpful'], callback_data='ai_feedback_not_helpful')
+            ],
+            [
+                InlineKeyboardButton(text['more_help'], callback_data='ai_continue'),
+                InlineKeyboardButton(text['human_support'], callback_data='ai_human_support')
+            ],
+            [
+                InlineKeyboardButton(text['main_menu'], callback_data='main_menu')
+            ]
+        ])
     
     @staticmethod
     def product_management_keyboard(language: str = 'fa') -> InlineKeyboardMarkup:

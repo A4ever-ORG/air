@@ -78,12 +78,24 @@ class Config:
     SUPPORTED_LANGUAGES = os.getenv('SUPPORTED_LANGUAGES', 'fa,en,ar').split(',')
     
     # AI Support Configuration
-    AI_ENABLED = os.getenv('AI_ENABLED', 'true').lower() == 'true'
-    AI_BASE_URL = os.getenv('AI_BASE_URL', 'https://ai.liara.ir/api/v1/687e3da1990c24f61dae6d13')
-    AI_API_KEY = os.getenv('AI_API_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiI2ODdhNzhmZjI3NGUxYzRlNjgzZTEwZTkiLCJ0eXBlIjoiYXV0aCIsImlhdCI6MTc1MzEwMzg3Nn0.EiwQySwDwWXZn9BLEbKaNoClUE-Ndz_6Xl4K1J5W_cE')
+    AI_API_BASE_URL = os.getenv('AI_API_BASE_URL', '')
+    AI_API_KEY = os.getenv('AI_API_KEY', '')
     AI_MODEL = os.getenv('AI_MODEL', 'google/gemini-2.0-flash-001')
-    AI_MAX_TOKENS = int(os.getenv('AI_MAX_TOKENS', '1000'))
+    AI_MAX_TOKENS = int(os.getenv('AI_MAX_TOKENS', '2000'))
     AI_TEMPERATURE = float(os.getenv('AI_TEMPERATURE', '0.7'))
+    
+    # File Storage Configuration (S3/MinIO)
+    S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME', 'coderoot-files')
+    S3_ACCESS_KEY = os.getenv('S3_ACCESS_KEY', '')
+    S3_SECRET_KEY = os.getenv('S3_SECRET_KEY', '')
+    S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL', '')
+    S3_REGION = os.getenv('S3_REGION', 'us-east-1')
+    
+    # Backup Configuration
+    BACKUP_S3_BUCKET = os.getenv('BACKUP_S3_BUCKET', 'coderoot-backups')
+    BACKUP_INTERVAL_HOURS = int(os.getenv('BACKUP_INTERVAL_HOURS', '24'))
+    BACKUP_RETENTION_DAYS = int(os.getenv('BACKUP_RETENTION_DAYS', '30'))
+    AUTO_BACKUP_ENABLED = os.getenv('AUTO_BACKUP_ENABLED', 'true').lower() == 'true'
     
     @classmethod
     def validate_required_config(cls):
