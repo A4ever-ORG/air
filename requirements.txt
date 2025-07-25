@@ -58,6 +58,9 @@ pydantic==2.5.0
 # HTTP Requests
 httpx==0.25.2
 
+# AI Integration
+openai>=1.0.0
+
 # Task Queue
 rq==1.15.1
 

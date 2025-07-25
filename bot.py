@@ -28,6 +28,7 @@ from utils.bot_utils import BotUtils
 from utils.notifications import NotificationManager
 from utils.security import Security
 from utils.language import Translator, Languages
+from services.ai_support import ai_support_manager
 from services.email_service import EmailService
 
 # Configure logging
@@ -171,6 +172,54 @@ async def help_command(client: Client, message: Message):
     except Exception as e:
         logger.error(f"Error in help command: {e}")
 
+# AI Support command
+@app.on_message(filters.command("support"))
+async def support_command(client: Client, message: Message):
+    """Handle /support command with AI assistance"""
+    try:
+        user_id = message.from_user.id
+        user = await db_manager.users.get_user(user_id) if db_manager.users else None
+        user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
+        
+        # Check if user has a specific question
+        args = message.text.split(maxsplit=1)
+        if len(args) > 1:
+            question = args[1]
+            
+            # Get user context for AI
+            context = {
+                'user_id': user_id,
+                'language': user_lang,
+                'has_shop': bool(user and user.get('shop_id')),
+                'plan': user.get('subscription_plan', 'free') if user else 'free'
+            }
+            
+            # Get AI response
+            ai_response = await ai_support_manager.handle_support_request(
+                user_id, question, user_lang, context
+            )
+            
+            await message.reply_text(f"🤖 **پاسخ هوشمند:**\n\n{ai_response}")
+            
+        else:
+            # Show support menu
+            support_messages = {
+                'fa': "🆘 **سیستم پشتیبانی هوشمند CodeRoot**\n\n✨ از هوش مصنوعی برای پاسخ سوالات استفاده کنید:\n\n💬 برای پرسیدن سوال:\n`/support سوال شما`\n\n🔹 مثال:\n`/support چطور فروشگاه بسازم؟`\n\n📞 تماس مستقیم با پشتیبانی:\n@hadi_admin",
+                'en': "🆘 **CodeRoot AI Support System**\n\n✨ Use AI to answer your questions:\n\n💬 To ask a question:\n`/support your question`\n\n🔹 Example:\n`/support how to create a shop?`\n\n📞 Direct support contact:\n@hadi_admin",
+                'ar': "🆘 **نظام الدعم الذكي CodeRoot**\n\n✨ استخدم الذكاء الاصطناعي للإجابة على أسئلتك:\n\n💬 لطرح سؤال:\n`/support سؤالك`\n\n🔹 مثال:\n`/support كيف أنشئ متجر؟`\n\n📞 الاتصال المباشر بالدعم:\n@hadi_admin"
+            }
+            
+            support_text = support_messages.get(user_lang, support_messages['fa'])
+            await message.reply_text(support_text)
+        
+        # Record analytics
+        if db_manager.analytics:
+            await db_manager.analytics.record_event('support_accessed', user_id)
+            
+    except Exception as e:
+        logger.error(f"Error in support command: {e}")
+        await message.reply_text("خطایی رخ داد. لطفاً دوباره تلاش کنید.")
+
 # Admin command
 @app.on_message(filters.command("admin"))
 async def admin_command(client: Client, message: Message):
@@ -308,6 +357,8 @@ async def callback_handler(client: Client, callback_query: CallbackQuery):
             await handle_payment_callbacks(client, callback_query)
         elif data.startswith('profile_'):
             await handle_profile_callbacks(client, callback_query)
+        elif data.startswith('support_'):
+            await handle_support_callbacks(client, callback_query)
         else:
             await callback_query.answer("عملیات نامشخص")
         
@@ -428,6 +479,128 @@ async def handle_profile_callbacks(client: Client, callback_query: CallbackQuery
     except Exception as e:
         logger.error(f"Error in profile callbacks: {e}")
 
+# Support callbacks handler
+async def handle_support_callbacks(client: Client, callback_query: CallbackQuery):
+    """Handle support-related callbacks with AI integration"""
+    try:
+        user_id = callback_query.from_user.id
+        action = callback_query.data.split('_', 1)[1]
+        
+        user = await db_manager.users.get_user(user_id) if db_manager.users else None
+        user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
+        
+        if action == 'contact':
+            # Show AI support interface
+            support_messages = {
+                'fa': """🤖 **پشتیبانی هوشمند CodeRoot**
+
+✨ **راه‌های دریافت کمک:**
+
+🔸 **پرسیدن از هوش مصنوعی:**
+دستور: `/support سوال شما`
+مثال: `/support چطور محصول اضافه کنم؟`
+
+🔸 **پشتیبانی انسانی:**
+💬 ارتباط مستقیم: @hadi_admin
+
+🔸 **راهنمای سریع:**
+• ایجاد فروشگاه: `/support فروشگاه جدید`
+• مشکل پرداخت: `/support پرداخت`
+• مدیریت محصولات: `/support محصولات`
+
+⚡️ **نکته:** هوش مصنوعی 24 ساعته در خدمت شماست!""",
+                
+                'en': """🤖 **CodeRoot AI Support**
+
+✨ **Ways to get help:**
+
+🔸 **Ask AI:**
+Command: `/support your question`
+Example: `/support how to add products?`
+
+🔸 **Human Support:**
+💬 Direct contact: @hadi_admin
+
+🔸 **Quick Guide:**
+• Create shop: `/support new shop`
+• Payment issues: `/support payment`
+• Manage products: `/support products`
+
+⚡️ **Note:** AI is available 24/7!""",
+                
+                'ar': """🤖 **دعم CodeRoot الذكي**
+
+✨ **طرق الحصول على المساعدة:**
+
+🔸 **اسأل الذكاء الاصطناعي:**
+الأمر: `/support سؤالك`
+مثال: `/support كيف أضيف منتجات؟`
+
+🔸 **الدعم البشري:**
+💬 الاتصال المباشر: @hadi_admin
+
+🔸 **دليل سريع:**
+• إنشاء متجر: `/support متجر جديد`
+• مشاكل الدفع: `/support الدفع`
+• إدارة المنتجات: `/support المنتجات`
+
+⚡️ **ملاحظة:** الذكاء الاصطناعي متاح 24/7!"""
+            }
+            
+            await callback_query.edit_message_text(
+                support_messages.get(user_lang, support_messages['fa']),
+                reply_markup=None
+            )
+            
+        elif action == 'faq':
+            # Show AI-powered FAQ
+            faq_question = "سوالات متداول CodeRoot"
+            
+            context = {
+                'user_id': user_id,
+                'language': user_lang,
+                'action': 'faq_request'
+            }
+            
+            faq_response = await ai_support_manager.search_faq(faq_question, user_lang)
+            
+            if faq_response:
+                await callback_query.edit_message_text(
+                    f"❓ **سوالات متداول:**\n\n{faq_response}",
+                    reply_markup=None
+                )
+            else:
+                fallback_messages = {
+                    'fa': "❓ برای مشاهده سوالات متداول از دستور `/support سوالات متداول` استفاده کنید.",
+                    'en': "❓ Use `/support faq` to view frequently asked questions.",
+                    'ar': "❓ استخدم `/support الأسئلة الشائعة` لعرض الأسئلة المتداولة."
+                }
+                await callback_query.edit_message_text(
+                    fallback_messages.get(user_lang, fallback_messages['fa']),
+                    reply_markup=None
+                )
+        
+        elif action == 'quick_help':
+            # Get contextual help based on user state
+            current_state = user_states.get(user_id, 'main_menu')
+            help_response = await ai_support_manager.get_quick_help(current_state, user_lang)
+            
+            await callback_query.edit_message_text(
+                f"💡 **راهنمای سریع:**\n\n{help_response}",
+                reply_markup=None
+            )
+            
+        else:
+            await callback_query.answer("عملیات نامشخص")
+        
+        # Record analytics
+        if db_manager.analytics:
+            await db_manager.analytics.record_event('ai_support_used', user_id)
+        
+    except Exception as e:
+        logger.error(f"Error in support callbacks: {e}")
+        await callback_query.answer("خطایی رخ داد")
+
 # Text message handler
 @app.on_message(filters.text & ~filters.command)
 async def text_handler(client: Client, message: Message):
@@ -447,13 +620,49 @@ async def text_handler(client: Client, message: Message):
         elif state == 'broadcast_message':
             await process_broadcast_message(client, message)
         else:
-            # Default response
+            # Handle natural language questions with AI
             user = await db_manager.users.get_user(user_id) if db_manager.users else None
             user_lang = user.get('language', Config.DEFAULT_LANGUAGE) if user else Config.DEFAULT_LANGUAGE
             
-            help_text = translator.get_text('unknown_command', user_lang)
-            keyboard = Keyboards.main_menu_keyboard(user_lang)
-            await message.reply_text(help_text, reply_markup=keyboard)
+            text = message.text.strip()
+            
+            # Check if message looks like a question
+            question_keywords = {
+                'fa': ['چطور', 'چگونه', 'کجا', 'چرا', 'چه', 'کی', 'آیا', '؟', 'مشکل', 'کمک', 'راهنما'],
+                'en': ['how', 'where', 'why', 'what', 'when', 'can', 'help', 'problem', '?', 'issue'],
+                'ar': ['كيف', 'أين', 'لماذا', 'ماذا', 'متى', 'هل', 'مساعدة', 'مشكلة', '؟', 'مشكل']
+            }
+            
+            # Check if text contains question keywords or is longer than 10 characters
+            is_question = (
+                len(text) > 10 or 
+                any(keyword in text.lower() for keyword in question_keywords.get(user_lang, [])) or
+                '?' in text
+            )
+            
+            if is_question:
+                # Get AI response for the question
+                context = {
+                    'user_id': user_id,
+                    'language': user_lang,
+                    'has_shop': bool(user and user.get('shop_id')),
+                    'plan': user.get('subscription_plan', 'free') if user else 'free'
+                }
+                
+                ai_response = await ai_support_manager.handle_support_request(
+                    user_id, text, user_lang, context
+                )
+                
+                await message.reply_text(f"🤖 **پاسخ هوشمند:**\n\n{ai_response}")
+                
+                # Record analytics
+                if db_manager.analytics:
+                    await db_manager.analytics.record_event('ai_question_answered', user_id)
+            else:
+                # Default response
+                help_text = translator.get_text('unknown_command', user_lang)
+                keyboard = Keyboards.main_menu_keyboard(user_lang)
+                await message.reply_text(help_text, reply_markup=keyboard)
         
     except Exception as e:
         logger.error(f"Error in text handler: {e}")
