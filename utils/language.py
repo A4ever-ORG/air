@@ -557,3 +557,6 @@ TRANSLATIONS = {
         "ar": "🆘 **مركز دعم CodeRoot**\n\nاختر نوع الدعم المفضل لديك:"
     }
 }
+
+# Create global translator instance
+translator = Translator()

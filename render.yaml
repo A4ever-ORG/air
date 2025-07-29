@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: coderoot-bot
+    runtime: docker
+    plan: starter
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PRODUCTION_MODE
+        value: "true"
+      - key: DEMO_MODE
+        value: "false"
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PORT
+        sync: false
+        value: "8000"
+    healthCheckPath: /
+    autoDeploy: true
+    branch: main
+  
+  # MongoDB database service
+  - type: pserv
+    name: coderoot-mongodb
+    runtime: docker
+    dockerfilePath: ./mongo.Dockerfile
+    plan: starter
+    disk:
+      name: mongodb-data
+      mountPath: /data/db
+      sizeGB: 1
+    env:
+      - key: MONGO_INITDB_ROOT_USERNAME
+        value: "admin"
+      - key: MONGO_INITDB_ROOT_PASSWORD
+        generateValue: true
+      - key: MONGO_INITDB_DATABASE
+        value: "coderoot_bot"
+
+databases:
+  - name: coderoot-db
+    databaseName: coderoot_bot
+    user: coderoot_user
+
+envVarGroups:
+  - name: database-config
+    envVars:
+      - key: MONGO_URI
+        fromDatabase:
+          name: coderoot-db
+          property: connectionString
+      - key: DATABASE_NAME
+        value: "coderoot_bot"

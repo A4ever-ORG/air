@@ -6,13 +6,13 @@ load_dotenv()
 
 class Config:
     # Telegram Bot Configuration
-    BOT_TOKEN = os.getenv('BOT_TOKEN', '7680510409:AAEHRgIrfH7FeuEa5qr2rFG6vGbfkVMxnVM')
-    API_ID = int(os.getenv('API_ID', '17064702'))
-    API_HASH = os.getenv('API_HASH', 'f65880b9eededbee85346f874819bbc5')
+    BOT_TOKEN = os.getenv('BOT_TOKEN')
+    API_ID = int(os.getenv('API_ID')) if os.getenv('API_ID') else None
+    API_HASH = os.getenv('API_HASH')
     
     # Admin Configuration
-    ADMIN_USER_ID = int(os.getenv('ADMIN_USER_ID', '7707164235'))
-    ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'hadi_admin')
+    ADMIN_USER_ID = int(os.getenv('ADMIN_USER_ID')) if os.getenv('ADMIN_USER_ID') else None
+    ADMIN_USERNAME = os.getenv('ADMIN_USERNAME')
     
     # Mode Configuration
     DEMO_MODE = os.getenv('DEMO_MODE', 'false').lower() == 'true'
@@ -79,8 +79,8 @@ class Config:
     
     # AI Service Configuration (Enhanced with Gemini 2.0 Flash)
     AI_ENABLED = os.getenv('AI_ENABLED', 'true').lower() == 'true'
-    AI_BASE_URL = os.getenv('AI_BASE_URL', 'https://ai.liara.ir/api/v1/687e3da1990c24f61dae6d13')
-    AI_API_KEY = os.getenv('AI_API_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiI2ODdhNzhmZjI3NGUxYzRlNjgzZTEwZTkiLCJ0eXBlIjoiYXV0aCIsImlhdCI6MTc1MzEwMzg3Nn0.EiwQySwDwWXZn9BLEbKaNoClUE-Ndz_6Xl4K1J5W_cE')
+    AI_BASE_URL = os.getenv('AI_BASE_URL', '')
+    AI_API_KEY = os.getenv('AI_API_KEY', '')
     AI_MODEL = os.getenv('AI_MODEL', 'google/gemini-2.0-flash-001')
     AI_MAX_TOKENS = int(os.getenv('AI_MAX_TOKENS', '1200'))
     AI_TEMPERATURE = float(os.getenv('AI_TEMPERATURE', '0.7'))
@@ -105,13 +105,16 @@ class Config:
     def validate_required_config(cls):
         """Validate that all required configuration is present"""
         required_vars = [
-            'BOT_TOKEN', 'API_ID', 'API_HASH', 'ADMIN_USER_ID'
+            ('BOT_TOKEN', cls.BOT_TOKEN),
+            ('API_ID', cls.API_ID),
+            ('API_HASH', cls.API_HASH),
+            ('ADMIN_USER_ID', cls.ADMIN_USER_ID)
         ]
         
         missing_vars = []
-        for var in required_vars:
-            if not getattr(cls, var):
-                missing_vars.append(var)
+        for var_name, var_value in required_vars:
+            if not var_value:
+                missing_vars.append(var_name)
         
         if missing_vars:
             raise ValueError(f"Missing required configuration: {', '.join(missing_vars)}")

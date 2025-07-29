@@ -11,7 +11,7 @@ from datetime import datetime
 import json
 
 from config import Config
-from utils.language import Translator
+from utils.language import translator
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class AISupport:
             self.model = None
             self.enabled = False
         self.context_cache = {}
-        self.translator = Translator()
+        self.translator = translator
         
     def get_system_context(self, language: str = 'fa') -> str:
         """Get comprehensive system context for AI training"""
@@ -413,7 +413,7 @@ class AISupportManager:
             
         except Exception as e:
             logger.error(f"Error handling support request: {e}")
-            return Translator().get_text('support_contact', language)
+            return self.ai_support.translator.get_text('support_contact', language)
     
     async def get_quick_help(self, user_state: str, language: str = 'fa') -> str:
         """Get quick contextual help"""
