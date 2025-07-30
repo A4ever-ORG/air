@@ -118,7 +118,8 @@ class BotUtils:
                 return dt.strftime("%Y/%m/%d %H:%M")
             else:  # full
                 return dt.strftime("%Y/%m/%d %H:%M:%S")
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"Date formatting error: {e}")
             return str(dt)
     
     @staticmethod
@@ -127,7 +128,8 @@ class BotUtils:
         try:
             delta = target_date - datetime.utcnow()
             return max(0, delta.days)
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"Date calculation error: {e}")
             return 0
     
     @staticmethod
@@ -223,7 +225,8 @@ class BotUtils:
                     }
             
             return {'action': data, 'param': '', 'extra': ''}
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"Callback data parsing error: {e}")
             return {'action': data, 'param': '', 'extra': ''}
     
     @staticmethod
@@ -330,7 +333,8 @@ class BotUtils:
             if value is None:
                 return default
             return str(value)
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"String conversion error: {e}")
             return default
     
     @staticmethod
@@ -518,7 +522,8 @@ class BotUtils:
                 if field in data and isinstance(data[field], str):
                     try:
                         data[field] = datetime.fromisoformat(data[field])
-                    except:
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"DateTime parsing error for field {field}: {e}")
                         pass
             
             return data
@@ -547,7 +552,8 @@ class BotUtils:
         try:
             numbers = re.findall(r'\d+', text)
             return [int(num) for num in numbers]
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"Number extraction error: {e}")
             return []
     
     @staticmethod
@@ -556,7 +562,8 @@ class BotUtils:
         try:
             mentions = re.findall(r'@(\w+)', text)
             return mentions
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"Mentions extraction error: {e}")
             return []
     
     @staticmethod
@@ -565,7 +572,8 @@ class BotUtils:
         try:
             hashtags = re.findall(r'#(\w+)', text)
             return hashtags
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"Hashtags extraction error: {e}")
             return []
     
     @staticmethod

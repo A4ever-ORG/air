@@ -17,12 +17,15 @@ import asyncio
 import logging
 import os
 from datetime import datetime
+from typing import Optional
 from pyrogram import Client, filters
 from pyrogram.types import Message, CallbackQuery, InlineKeyboardMarkup
 from pyrogram.enums import ParseMode
+from aiohttp import web
+import threading
 
 from config import Config
-from database import db_manager
+from database import DatabaseManager
 from utils.keyboards import Keyboards
 from utils.validation import Validation
 from utils.bot_utils import BotUtils
@@ -448,6 +451,28 @@ async def shutdown():
         logger.info("🛑 CodeRoot Bot shutdown complete")
     except Exception as e:
         logger.error(f"❌ Shutdown error: {e}")
+
+async def health_check(request):
+    """Health check endpoint for Render"""
+    return web.Response(text="OK", status=200)
+
+async def start_health_server():
+    """Start health check server"""
+    try:
+        app_web = web.Application()
+        app_web.router.add_get('/health', health_check)
+        app_web.router.add_get('/', health_check)
+        
+        runner = web.AppRunner(app_web)
+        await runner.setup()
+        
+        port = int(os.environ.get('PORT', 8000))
+        site = web.TCPSite(runner, '0.0.0.0', port)
+        await site.start()
+        
+        logger.info(f"🏥 Health check server started on port {port}")
+    except Exception as e:
+        logger.error(f"❌ Failed to start health server: {e}")
 
 # Language selection handler
 async def handle_language_selection(client: Client, callback_query: CallbackQuery):
@@ -951,6 +976,31 @@ async def start_shop_creation(client: Client, callback_query: CallbackQuery):
     except Exception as e:
         logger.error(f"Error starting shop creation: {e}")
 
+async def create_sub_bot(shop_name: str) -> Optional[str]:
+    """Create a sub-bot for the shop"""
+    try:
+        # For production, this would integrate with BotFather API
+        # For now, return a placeholder token that can be used for testing
+        if Config.DEMO_MODE:
+            # Generate a demo token for testing
+            import secrets
+            demo_token = f"demo_{secrets.token_hex(8)}:{secrets.token_hex(16)}"
+            logger.info(f"Demo sub-bot token generated for shop {shop_name}")
+            return demo_token
+        
+        # In production, this would:
+        # 1. Call BotFather API to create new bot
+        # 2. Set bot name and username based on shop name
+        # 3. Get bot token from BotFather
+        # 4. Return the token
+        
+        logger.warning("Sub-bot creation not implemented for production mode")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error creating sub-bot for {shop_name}: {e}")
+        return None
+
 async def create_user_shop(user_id: int, shop_data: dict) -> dict:
     """Create a new shop for user"""
     try:
@@ -960,10 +1010,16 @@ async def create_user_shop(user_id: int, shop_data: dict) -> dict:
         # Create shop in database
         shop = await db_manager.shops.create_shop(shop_data)
         
-        # TODO: Create sub-bot (placeholder for now)
-        # shop_token = await create_sub_bot(shop['name'])
-        # if shop_token:
-        #     await db_manager.shops.update_shop(shop['_id'], {'bot_token': shop_token})
+        # Create sub-bot for the shop
+        try:
+            shop_token = await create_sub_bot(shop['name'])
+            if shop_token:
+                await db_manager.shops.update_shop(shop['_id'], {'bot_token': shop_token})
+                logger.info(f"Sub-bot created for shop {shop['name']}")
+            else:
+                logger.warning(f"Failed to create sub-bot for shop {shop['name']}")
+        except Exception as e:
+            logger.error(f"Error creating sub-bot for shop {shop['name']}: {e}")
         
         # Send notification to admin
         await NotificationManager.notify_new_shop(None, shop)  # client will be passed properly in real implementation
@@ -1119,6 +1175,7 @@ async def main():
         
         # Initialize services
         email_service = EmailService()
+        db_manager = DatabaseManager()
         
         logger.info("🚀 CodeRoot Bot starting up...")
         
@@ -1130,6 +1187,9 @@ async def main():
         
         # Call startup function
         await startup()
+        
+        # Start health check server for Render
+        await start_health_server()
         
         logger.info("🤖 CodeRoot Bot is running...")
         
