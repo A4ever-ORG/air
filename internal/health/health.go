@@ -3,7 +3,6 @@ package health
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"runtime"
 	"time"
@@ -12,11 +11,11 @@ import (
 )
 
 type Server struct {
-	logger logger.Logger
+	logger *logger.Logger
 	server *http.Server
 }
 
-func NewServer(logger logger.Logger) *Server {
+func NewServer(logger *logger.Logger) *Server {
 	return &Server{
 		logger: logger,
 	}

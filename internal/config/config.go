@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -169,4 +170,18 @@ func getEnvBool(key string, defaultValue bool) bool {
 		}
 	}
 	return defaultValue
+}
+
+// Validate validates the configuration
+func (c *Config) Validate() error {
+	if c.BotToken == "" {
+		return fmt.Errorf("BOT_TOKEN is required")
+	}
+	if c.MongoURI == "" {
+		return fmt.Errorf("MONGO_URI is required")
+	}
+	if c.RedisURL == "" {
+		return fmt.Errorf("REDIS_URL is required")
+	}
+	return nil
 }
