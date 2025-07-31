@@ -62,11 +62,11 @@ type Config struct {
 	SecretKey string
 
 	// Default Settings
-	DefaultLanguage     string
-	MaxShopsPerUser     int
-	SessionTimeout      int
-	MaxConcurrentUsers  int
-	RateLimitPerMinute  int
+	DefaultLanguage    string
+	MaxShopsPerUser    int
+	SessionTimeout     int
+	MaxConcurrentUsers int
+	RateLimitPerMinute int
 }
 
 // Load loads configuration from environment variables
@@ -127,11 +127,11 @@ func Load() (*Config, error) {
 		SecretKey: getEnv("SECRET_KEY", "your_secret_key_here"),
 
 		// Default Settings
-		DefaultLanguage:     getEnv("DEFAULT_LANGUAGE", "fa"),
-		MaxShopsPerUser:     getEnvInt("MAX_SHOPS_PER_USER", 3),
-		SessionTimeout:      getEnvInt("SESSION_TIMEOUT", 3600),
-		MaxConcurrentUsers:  getEnvInt("MAX_CONCURRENT_USERS", 1000),
-		RateLimitPerMinute:  getEnvInt("RATE_LIMIT_PER_MINUTE", 60),
+		DefaultLanguage:    getEnv("DEFAULT_LANGUAGE", "fa"),
+		MaxShopsPerUser:    getEnvInt("MAX_SHOPS_PER_USER", 3),
+		SessionTimeout:     getEnvInt("SESSION_TIMEOUT", 3600),
+		MaxConcurrentUsers: getEnvInt("MAX_CONCURRENT_USERS", 1000),
+		RateLimitPerMinute: getEnvInt("RATE_LIMIT_PER_MINUTE", 60),
 	}
 
 	return cfg, nil

@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"github.com/redis/go-redis/v9"
 
 	"coderoot-bot/internal/config"
 	"coderoot-bot/internal/logger"
@@ -14,9 +14,9 @@ import (
 
 // Database manages database connections and repositories
 type Database struct {
-	MongoDB    *mongo.Database
-	RedisDB    *redis.Client
-	logger     *logger.Logger
+	MongoDB *mongo.Database
+	RedisDB *redis.Client
+	logger  *logger.Logger
 
 	// Repositories
 	Users     *UserRepository
@@ -57,7 +57,7 @@ func (d *Database) connectMongoDB(cfg *config.Config) error {
 	defer cancel()
 
 	clientOptions := options.Client().ApplyURI(cfg.MongoURI)
-	
+
 	// Configure connection pool
 	clientOptions.SetMaxPoolSize(100)
 	clientOptions.SetMinPoolSize(5)
@@ -77,7 +77,7 @@ func (d *Database) connectMongoDB(cfg *config.Config) error {
 
 	d.MongoDB = client.Database(cfg.DatabaseName)
 	d.logger.Info("✅ Connected to MongoDB: %s", cfg.DatabaseName)
-	
+
 	return nil
 }
 

@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: coderoot-bot
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: oregon
+    branch: go
+    healthCheckPath: /health
+    numInstances: 1
+    
+    # Build settings
+    buildCommand: ""  # Docker build handles everything
+    startCommand: ""  # Dockerfile ENTRYPOINT handles this
+    
+    # Environment variables (set these in Render dashboard)
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SERVER_PORT
+        value: "8080"
+      - key: SERVER_HOST
+        value: "0.0.0.0"
+      - key: DEMO_MODE
+        value: "false"
+      - key: PRODUCTION_MODE
+        value: "true"
+      - key: DEFAULT_LANGUAGE
+        value: "fa"
+      - key: LOG_LEVEL
+        value: "info"
+      - key: PROFESSIONAL_PLAN_PRICE
+        value: "50000"
+      - key: VIP_PLAN_PRICE
+        value: "100000"
+      - key: COMMISSION_RATE
+        value: "10"
+      
+      # These should be set as secrets in Render dashboard:
+      # - BOT_TOKEN (required)
+      # - API_ID (required) 
+      # - API_HASH (required)
+      # - MONGO_URI (required)
+      # - REDIS_URL (required)
+      # - ADMIN_USER_ID (required)
+      # - ADMIN_USERNAME (required)
+      # - CARD_NUMBER (optional)
+      # - CARD_HOLDER_NAME (optional)
+      # - MAIN_CHANNEL_ID (optional)
+      # - MAIN_CHANNEL_USERNAME (optional)
+      # - WEBHOOK_URL (optional)
+    
+    # Auto-deploy settings
+    autoDeploy: true
+    
+    # Scaling settings
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetMemoryPercent: 70
+      targetCPUPercent: 70

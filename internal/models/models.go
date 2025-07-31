@@ -41,11 +41,11 @@ type Shop struct {
 
 // ShopSettings represents shop configuration
 type ShopSettings struct {
-	Currency         string `bson:"currency" json:"currency"`
-	PaymentMethod    string `bson:"payment_method" json:"payment_method"`
-	AutoReply        bool   `bson:"auto_reply" json:"auto_reply"`
-	NotifyNewOrders  bool   `bson:"notify_new_orders" json:"notify_new_orders"`
-	RequireJoinChannel bool `bson:"require_join_channel" json:"require_join_channel"`
+	Currency           string `bson:"currency" json:"currency"`
+	PaymentMethod      string `bson:"payment_method" json:"payment_method"`
+	AutoReply          bool   `bson:"auto_reply" json:"auto_reply"`
+	NotifyNewOrders    bool   `bson:"notify_new_orders" json:"notify_new_orders"`
+	RequireJoinChannel bool   `bson:"require_join_channel" json:"require_join_channel"`
 }
 
 // ShopStats represents shop statistics
@@ -97,12 +97,12 @@ type Order struct {
 type OrderStatus string
 
 const (
-	OrderStatusPending   OrderStatus = "pending"
-	OrderStatusConfirmed OrderStatus = "confirmed"
+	OrderStatusPending    OrderStatus = "pending"
+	OrderStatusConfirmed  OrderStatus = "confirmed"
 	OrderStatusProcessing OrderStatus = "processing"
-	OrderStatusShipped   OrderStatus = "shipped"
-	OrderStatusDelivered OrderStatus = "delivered"
-	OrderStatusCancelled OrderStatus = "cancelled"
+	OrderStatusShipped    OrderStatus = "shipped"
+	OrderStatusDelivered  OrderStatus = "delivered"
+	OrderStatusCancelled  OrderStatus = "cancelled"
 )
 
 // PaymentStatus represents payment status
@@ -118,28 +118,28 @@ const (
 
 // ShippingInfo represents shipping information
 type ShippingInfo struct {
-	Name        string `bson:"name" json:"name"`
-	Phone       string `bson:"phone" json:"phone"`
-	Address     string `bson:"address" json:"address"`
-	City        string `bson:"city" json:"city"`
-	Province    string `bson:"province" json:"province"`
-	PostalCode  string `bson:"postal_code" json:"postal_code"`
+	Name         string `bson:"name" json:"name"`
+	Phone        string `bson:"phone" json:"phone"`
+	Address      string `bson:"address" json:"address"`
+	City         string `bson:"city" json:"city"`
+	Province     string `bson:"province" json:"province"`
+	PostalCode   string `bson:"postal_code" json:"postal_code"`
 	TrackingCode string `bson:"tracking_code,omitempty" json:"tracking_code,omitempty"`
 }
 
 // Payment represents a payment transaction
 type Payment struct {
-	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	OrderID       primitive.ObjectID `bson:"order_id" json:"order_id"`
-	UserID        int64              `bson:"user_id" json:"user_id"`
-	Amount        int                `bson:"amount" json:"amount"`
-	Currency      string             `bson:"currency" json:"currency"`
-	Method        string             `bson:"method" json:"method"`
-	Status        PaymentStatus      `bson:"status" json:"status"`
-	TransactionID string             `bson:"transaction_id,omitempty" json:"transaction_id,omitempty"`
+	ID            primitive.ObjectID     `bson:"_id,omitempty" json:"id"`
+	OrderID       primitive.ObjectID     `bson:"order_id" json:"order_id"`
+	UserID        int64                  `bson:"user_id" json:"user_id"`
+	Amount        int                    `bson:"amount" json:"amount"`
+	Currency      string                 `bson:"currency" json:"currency"`
+	Method        string                 `bson:"method" json:"method"`
+	Status        PaymentStatus          `bson:"status" json:"status"`
+	TransactionID string                 `bson:"transaction_id,omitempty" json:"transaction_id,omitempty"`
 	GatewayData   map[string]interface{} `bson:"gateway_data,omitempty" json:"gateway_data,omitempty"`
-	CreatedAt     time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt     time.Time          `bson:"updated_at" json:"updated_at"`
+	CreatedAt     time.Time              `bson:"created_at" json:"created_at"`
+	UpdatedAt     time.Time              `bson:"updated_at" json:"updated_at"`
 }
 
 // UserSession represents user session data
@@ -152,31 +152,31 @@ type UserSession struct {
 
 // Analytics represents analytics data
 type Analytics struct {
-	ID               primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Date             time.Time          `bson:"date" json:"date"`
-	TotalUsers       int                `bson:"total_users" json:"total_users"`
-	NewUsers         int                `bson:"new_users" json:"new_users"`
-	ActiveUsers      int                `bson:"active_users" json:"active_users"`
-	TotalShops       int                `bson:"total_shops" json:"total_shops"`
-	NewShops         int                `bson:"new_shops" json:"new_shops"`
-	TotalOrders      int                `bson:"total_orders" json:"total_orders"`
-	TotalRevenue     int                `bson:"total_revenue" json:"total_revenue"`
-	MessagesSent     int                `bson:"messages_sent" json:"messages_sent"`
-	CommandsUsed     map[string]int     `bson:"commands_used" json:"commands_used"`
-	ErrorsCount      int                `bson:"errors_count" json:"errors_count"`
+	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Date         time.Time          `bson:"date" json:"date"`
+	TotalUsers   int                `bson:"total_users" json:"total_users"`
+	NewUsers     int                `bson:"new_users" json:"new_users"`
+	ActiveUsers  int                `bson:"active_users" json:"active_users"`
+	TotalShops   int                `bson:"total_shops" json:"total_shops"`
+	NewShops     int                `bson:"new_shops" json:"new_shops"`
+	TotalOrders  int                `bson:"total_orders" json:"total_orders"`
+	TotalRevenue int                `bson:"total_revenue" json:"total_revenue"`
+	MessagesSent int                `bson:"messages_sent" json:"messages_sent"`
+	CommandsUsed map[string]int     `bson:"commands_used" json:"commands_used"`
+	ErrorsCount  int                `bson:"errors_count" json:"errors_count"`
 }
 
 // BotSettings represents bot configuration
 type BotSettings struct {
-	ID                    primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	MaintenanceMode       bool               `bson:"maintenance_mode" json:"maintenance_mode"`
-	MaintenanceMessage    string             `bson:"maintenance_message" json:"maintenance_message"`
-	WelcomeMessage        map[string]string  `bson:"welcome_message" json:"welcome_message"`
-	MaxShopsPerUser       int                `bson:"max_shops_per_user" json:"max_shops_per_user"`
-	RequireChannelJoin    bool               `bson:"require_channel_join" json:"require_channel_join"`
-	AutoBackup            bool               `bson:"auto_backup" json:"auto_backup"`
-	BackupInterval        int                `bson:"backup_interval" json:"backup_interval"`
-	RateLimitPerMinute    int                `bson:"rate_limit_per_minute" json:"rate_limit_per_minute"`
-	EnabledFeatures       []string           `bson:"enabled_features" json:"enabled_features"`
-	UpdatedAt             time.Time          `bson:"updated_at" json:"updated_at"`
+	ID                 primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	MaintenanceMode    bool               `bson:"maintenance_mode" json:"maintenance_mode"`
+	MaintenanceMessage string             `bson:"maintenance_message" json:"maintenance_message"`
+	WelcomeMessage     map[string]string  `bson:"welcome_message" json:"welcome_message"`
+	MaxShopsPerUser    int                `bson:"max_shops_per_user" json:"max_shops_per_user"`
+	RequireChannelJoin bool               `bson:"require_channel_join" json:"require_channel_join"`
+	AutoBackup         bool               `bson:"auto_backup" json:"auto_backup"`
+	BackupInterval     int                `bson:"backup_interval" json:"backup_interval"`
+	RateLimitPerMinute int                `bson:"rate_limit_per_minute" json:"rate_limit_per_minute"`
+	EnabledFeatures    []string           `bson:"enabled_features" json:"enabled_features"`
+	UpdatedAt          time.Time          `bson:"updated_at" json:"updated_at"`
 }

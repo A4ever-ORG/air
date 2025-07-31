@@ -1,11 +1,11 @@
 package database
 
 import (
-	"context"
-	"go.mongodb.org/mongo-driver/mongo"
-	"github.com/redis/go-redis/v9"
 	"coderoot-bot/internal/logger"
 	"coderoot-bot/internal/models"
+	"context"
+	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // UserRepository handles user operations
@@ -55,8 +55,8 @@ func (r *UserRepository) Update(ctx context.Context, userID int64, updates map[s
 func (r *UserRepository) GetUserStats(ctx context.Context) (map[string]interface{}, error) {
 	// TODO: Implement actual statistics query
 	return map[string]interface{}{
-		"total_users": 0,
-		"active_users": 0,
+		"total_users":   0,
+		"active_users":  0,
 		"premium_users": 0,
 	}, nil
 }

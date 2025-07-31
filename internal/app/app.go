@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/gin-gonic/gin"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"coderoot-bot/internal/config"
 	"coderoot-bot/internal/database"
@@ -79,7 +79,7 @@ func (a *App) Start(ctx context.Context) error {
 	go func() {
 		addr := fmt.Sprintf("%s:%s", a.config.ServerHost, a.config.ServerPort)
 		a.logger.Info("🌐 Starting HTTP server on %s", addr)
-		
+
 		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			a.logger.Error("❌ HTTP server error: %v", err)
 		}

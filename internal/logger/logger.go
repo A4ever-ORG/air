@@ -40,7 +40,7 @@ func New() *Logger {
 			zapcore.AddSync(logFile),
 			zapcore.InfoLevel,
 		)
-		
+
 		// Combine console and file outputs
 		core := zapcore.NewTee(consoleCore, fileCore)
 		logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))

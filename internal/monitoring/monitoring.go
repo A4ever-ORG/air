@@ -9,22 +9,22 @@ import (
 )
 
 type Monitor struct {
-	logger    *logger.Logger
-	ctx       context.Context
-	cancel    context.CancelFunc
-	metrics   *Metrics
-	interval  time.Duration
+	logger   *logger.Logger
+	ctx      context.Context
+	cancel   context.CancelFunc
+	metrics  *Metrics
+	interval time.Duration
 }
 
 type Metrics struct {
-	StartTime     time.Time
-	Uptime        time.Duration
-	MemoryUsage   MemoryStats
-	CPUUsage      float64
-	Goroutines    int
-	Requests      int64
-	Errors        int64
-	LastUpdate    time.Time
+	StartTime   time.Time
+	Uptime      time.Duration
+	MemoryUsage MemoryStats
+	CPUUsage    float64
+	Goroutines  int
+	Requests    int64
+	Errors      int64
+	LastUpdate  time.Time
 }
 
 type MemoryStats struct {
@@ -49,7 +49,7 @@ func New(logger *logger.Logger) *Monitor {
 
 func (m *Monitor) Start() {
 	m.logger.Info("📊 Starting monitoring system...")
-	
+
 	go m.collectMetrics()
 	go m.reportMetrics()
 }
@@ -106,7 +106,7 @@ func (m *Monitor) reportMetrics() {
 
 func (m *Monitor) logMetrics() {
 	metrics := m.metrics
-	
+
 	m.logger.Info("📊 System Metrics Report:")
 	m.logger.Info("⏱️  Uptime: %v", metrics.Uptime)
 	m.logger.Info("💾 Memory Alloc: %d MB", metrics.MemoryUsage.Alloc/1024/1024)
@@ -134,12 +134,12 @@ func (m *Monitor) IncrementErrors() {
 func (m *Monitor) GetHealthData() map[string]interface{} {
 	metrics := m.metrics
 	return map[string]interface{}{
-		"status":     "healthy",
-		"uptime":     metrics.Uptime.String(),
-		"memory_mb":  metrics.MemoryUsage.Alloc / 1024 / 1024,
-		"goroutines": metrics.Goroutines,
-		"requests":   metrics.Requests,
-		"errors":     metrics.Errors,
+		"status":      "healthy",
+		"uptime":      metrics.Uptime.String(),
+		"memory_mb":   metrics.MemoryUsage.Alloc / 1024 / 1024,
+		"goroutines":  metrics.Goroutines,
+		"requests":    metrics.Requests,
+		"errors":      metrics.Errors,
 		"last_update": metrics.LastUpdate.Format(time.RFC3339),
 	}
 }
