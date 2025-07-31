@@ -1,448 +1,392 @@
-# 🚀 CodeRoot Bot - High-Performance Go Edition
+# ⚔️ Kali Security Suite
 
-[![Go Version](https://img.shields.io/badge/Go-1.21-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Deployment](https://img.shields.io/badge/Deploy-Liara-purple.svg)](https://liara.ir)
-[![Telegram](https://img.shields.io/badge/Platform-Telegram-blue.svg)](https://telegram.org)
+[![Platform](https://img.shields.io/badge/Platform-Kali%20Linux-red.svg)](https://www.kali.org)
+[![Security](https://img.shields.io/badge/Security-Advanced-orange.svg)](https://www.kali.org)
 
-> **Enterprise-grade Telegram bot for creating and managing online stores**  
-> Built with Go for maximum performance and minimal resource usage
+> Advanced Penetration Testing & Security Analysis Suite for Kali Linux
 
-[English](#english) | [فارسی](#فارسی)
+## 🚀 Overview
 
----
+The **Kali Security Suite** is a comprehensive security and penetration testing toolkit specifically optimized for Kali Linux. This advanced Go application provides real-time security monitoring, automated vulnerability assessment, network analysis, and penetration testing capabilities.
 
-## 🌟 Features
+## ✨ Features
 
-### 🏪 **Complete E-commerce Solution**
-- **Multi-store Management**: Users can create and manage multiple online stores
-- **Product Catalog**: Full product management with images, pricing, and inventory
-- **Order Processing**: Complete order lifecycle from cart to delivery
-- **Payment Integration**: Support for Iranian payment gateways
-- **Admin Dashboard**: Comprehensive analytics and user management
+### 🔍 Security Scanning
+- **Network Vulnerability Assessment**: Comprehensive network security analysis
+- **System Security Analysis**: Deep system security evaluation
+- **Port Scanning & Service Detection**: Advanced port and service identification
+- **Web Application Security Testing**: Web app vulnerability assessment
+- **Database Security Assessment**: Database security analysis
+- **Wireless Network Analysis**: WiFi security testing
+- **Social Engineering Assessment**: Human factor security testing
+- **Physical Security Evaluation**: Physical security assessment
 
-### 🌍 **Multi-language Support**
-- **Persian (فارسی)** - Native RTL support
-- **English** - Full internationalization
-- **Arabic (العربية)** - Complete localization
+### 🌐 Network Analysis
+- **Packet Capture & Analysis**: Real-time packet inspection
+- **Network Topology Mapping**: Network structure visualization
+- **Traffic Pattern Analysis**: Network behavior analysis
+- **Protocol Analysis**: Deep protocol inspection
+- **Bandwidth Monitoring**: Network performance tracking
+- **Network Performance Testing**: Network optimization
+- **Wireless Network Scanning**: WiFi network analysis
+- **Network Security Assessment**: Comprehensive network security
 
-### ⚡ **High Performance**
-- **10-20x faster** than Python alternatives
-- **3-5x less memory** consumption
-- **Sub-second startup time**
-- **Concurrent processing** with Goroutines
-- **Single binary deployment**
+### 🎯 Penetration Testing
+- **Reconnaissance & Information Gathering**: Target intelligence collection
+- **Vulnerability Assessment**: Automated vulnerability discovery
+- **Exploitation & Privilege Escalation**: Advanced exploitation techniques
+- **Post-Exploitation Analysis**: Post-compromise analysis
+- **Persistence & Backdoor Detection**: Malware detection
+- **Covering Tracks & Evidence Collection**: Forensic preparation
 
----
+### 🛡️ System Hardening
+- **Firewall Configuration**: Advanced firewall setup
+- **User Access Control**: User privilege management
+- **Service Hardening**: Service security optimization
+- **Network Security Policies**: Network policy implementation
+- **Encryption Implementation**: Data encryption setup
+- **Audit Logging Setup**: Security event logging
+- **Backup Security**: Secure backup implementation
+- **Incident Response Preparation**: IR team preparation
 
-## 🏗️ Architecture
+### 📊 Real-time Monitoring
+- **System Resource Monitoring**: Real-time system tracking
+- **Network Traffic Analysis**: Live network monitoring
+- **Security Event Logging**: Security event tracking
+- **Threat Detection & Alerting**: Automated threat detection
+- **Performance Metrics Tracking**: Performance monitoring
+- **Anomaly Detection**: Behavioral analysis
+- **Real-time Reporting**: Live security reports
+- **Automated Response System**: Automated security responses
 
-### **Clean Architecture Design**
-```
-├── main.go                 # Application entry point
-├── internal/
-│   ├── app/               # Application orchestration
-│   ├── config/            # Configuration management
-│   ├── database/          # Data access layer
-│   │   ├── database.go    # Connection management
-│   │   ├── repositories.go # Data repositories
-│   │   └── user_repository.go # User operations
-│   ├── handlers/          # Telegram message handlers
-│   ├── models/            # Data models
-│   ├── services/          # Business logic
-│   ├── utils/             # Utilities and helpers
-│   └── logger/            # Structured logging
-```
+## 🛠️ Installation
 
-### **Technology Stack**
-- **Framework**: Native Go with Gorilla/Gin
-- **Database**: MongoDB with connection pooling
-- **Cache**: Redis for session and data caching
-- **Logging**: Structured logging with Zap
-- **Deployment**: Docker containers on Liara
+### Prerequisites
 
----
-
-## 🚀 Quick Start
-
-### **Prerequisites**
-- Go 1.21 or higher
-- MongoDB (Atlas recommended)
-- Redis instance
-- Telegram Bot Token
-
-### **1. Clone Repository**
 ```bash
-git clone https://github.com/A4ever-ORG/air.git
-cd air
-git checkout go
+# Update Kali Linux
+sudo apt update && sudo apt upgrade -y
+
+# Install Go (if not already installed)
+sudo apt install golang-go -y
+
+# Install additional security tools
+sudo apt install -y nmap wireshark aircrack-ng metasploit-framework
 ```
 
-### **2. Environment Setup**
+### Quick Installation
+
 ```bash
-cp .env.go.example .env
-# Edit .env with your configuration
-```
+# Clone the repository
+git clone https://github.com/awesome-project/kali-security-suite.git
+cd kali-security-suite
 
-### **3. Required Environment Variables**
-```env
-BOT_TOKEN=your_bot_token_from_botfather
-API_ID=your_telegram_api_id
-API_HASH=your_telegram_api_hash
-ADMIN_USER_ID=your_telegram_user_id
-MONGO_URI=mongodb+srv://...
-REDIS_URL=redis://localhost:6379
-```
-
-### **4. Build and Run**
-```bash
 # Install dependencies
 go mod download
 
-# Build application
-go build -o coderoot-bot
+# Build the application
+go build -o kali-security-suite
 
-# Run bot
-./coderoot-bot
+# Make executable
+chmod +x kali-security-suite
+
+# Run the application
+./kali-security-suite
 ```
 
----
+### Docker Installation
 
-## 🌐 Deployment
-
-### **Liara Platform (Recommended)**
-
-The bot is optimized for deployment on [Liara](https://liara.ir):
-
-```bash
-# Install Liara CLI
-npm install -g @liara/cli
-
-# Login to your account
-liara login
-
-# Deploy application
-liara deploy
-```
-
-**📖 [Complete Deployment Guide](LIARA_DEPLOYMENT_GUIDE.md)**
-
-### **Docker Deployment**
 ```bash
 # Build Docker image
-docker build -f Dockerfile.liara -t coderoot-bot .
+docker build -t kali-security-suite .
 
-# Run container
-docker run -p 8080:8080 --env-file .env coderoot-bot
+# Run with Docker
+docker run -it --privileged kali-security-suite
 ```
 
----
+## 📖 Usage
 
-## 📊 Performance Comparison
+### Basic Commands
 
-| Metric | Python Version | **Go Version** |
-|--------|----------------|----------------|
-| **Startup Time** | ~5 seconds | **~500ms** |
-| **Memory Usage** | ~150MB | **~30MB** |
-| **Response Time** | ~100ms | **~10ms** |
-| **Concurrent Users** | ~100 | **~10,000+** |
-| **Container Size** | ~200MB | **~50MB** |
-| **CPU Usage** | High | **Low** |
+```bash
+# Show help
+./kali-security-suite --help
 
----
+# Run comprehensive security scan
+./kali-security-suite scan
 
-## 🛠️ Development
+# Perform network analysis
+./kali-security-suite network
 
-### **Project Structure**
-```
-coderoot-bot/
-├── 📄 main.go              # Entry point
-├── 📦 go.mod              # Dependencies
-├── 🐳 Dockerfile.liara    # Container definition
-├── ⚙️ liara.json          # Platform config
-├── 🔧 .env.go.example     # Environment template
-│
-├── internal/              # Application code
-│   ├── app/              # 🎯 Application layer
-│   ├── config/           # ⚙️ Configuration
-│   ├── database/         # 💾 Data access
-│   ├── handlers/         # 📡 Message handlers
-│   ├── models/           # 📊 Data models
-│   ├── services/         # 💼 Business logic
-│   ├── utils/            # 🔧 Utilities
-│   └── logger/           # 📋 Logging
-│
-└── docs/                 # 📚 Documentation
-    ├── LIARA_DEPLOYMENT_GUIDE.md
-    └── GO_VERSION_COMPLETE.md
+# Execute penetration testing
+./kali-security-suite pentest
+
+# Apply system hardening
+./kali-security-suite harden
+
+# Start real-time monitoring
+./kali-security-suite monitor
+
+# Generate security report
+./kali-security-suite report
 ```
 
-### **Key Components**
+### Advanced Usage
 
-#### **🎯 Application Layer (`internal/app/`)**
-- Main application orchestration
-- HTTP server with health checks
-- Graceful shutdown handling
-- Service coordination
+```bash
+# Run with custom configuration
+./kali-security-suite scan --config custom-config.yaml
 
-#### **📡 Handlers (`internal/handlers/`)**
-- Telegram update processing
-- Command routing
-- Callback query handling
-- User interaction management
+# Enable verbose logging
+./kali-security-suite scan --verbose
 
-#### **💾 Database Layer (`internal/database/`)**
-- MongoDB connection pooling
-- Redis caching integration
-- Repository pattern implementation
-- Data access optimization
+# Run in background mode
+./kali-security-suite monitor --daemon
 
-#### **💼 Services (`internal/services/`)**
-- Business logic implementation
-- User management
-- Shop operations
-- Payment processing
-
----
-
-## 🤖 Bot Commands
-
-### **User Commands**
-| Command | Description |
-|---------|-------------|
-| `/start` | Initialize bot and show main menu |
-| `/help` | Display help information |
-| `/shops` | Manage user stores |
-| `/settings` | User preferences |
-
-### **Admin Commands**
-| Command | Description |
-|---------|-------------|
-| `/admin` | Access admin panel |
-| `/stats` | View bot statistics |
-| `/broadcast` | Send messages to all users |
-| `/backup` | Create data backup |
-
----
+# Export results to file
+./kali-security-suite scan --output results.json
+```
 
 ## 🔧 Configuration
 
-### **Environment Variables**
+### Environment Variables
 
-#### **🔐 Required**
-```env
-BOT_TOKEN=         # Telegram bot token
-API_ID=            # Telegram API ID
-API_HASH=          # Telegram API hash
-ADMIN_USER_ID=     # Admin Telegram user ID
+```bash
+# Security mode
+export SECURITY_MODE=kali
+
+# Scan intensity
+export SCAN_INTENSITY=high
+
+# Process priority
+export NICE=-10
+
+# Go optimizations
+export GOGC=50
+export GOMAXPROCS=4
 ```
 
-#### **🗄️ Database**
-```env
-MONGO_URI=         # MongoDB connection string
-DATABASE_NAME=     # Database name
-REDIS_URL=         # Redis connection URL
+### Configuration File
+
+Create `config.yaml`:
+
+```yaml
+security:
+  mode: kali
+  intensity: high
+  auto_update: true
+  
+network:
+  scan_ports: true
+  packet_capture: true
+  wireless_scan: true
+  
+monitoring:
+  real_time: true
+  alerting: true
+  logging: true
+  
+reporting:
+  format: pdf
+  auto_generate: true
+  email_notifications: true
 ```
 
-#### **🌐 Server**
-```env
-SERVER_PORT=8080   # HTTP server port
-SERVER_HOST=0.0.0.0 # Server bind address
-PRODUCTION_MODE=true # Production mode flag
+## 🏗️ Architecture
+
+```
+kali-security-suite/
+├── main.go                 # Main application entry point
+├── go.mod                  # Go module dependencies
+├── go.sum                  # Dependency checksums
+├── config.yaml             # Configuration file
+├── internal/               # Internal packages
+│   ├── security/           # Security modules
+│   ├── network/            # Network analysis
+│   ├── monitoring/         # Real-time monitoring
+│   └── reporting/          # Report generation
+├── cmd/                    # Command implementations
+├── pkg/                    # Public packages
+├── scripts/                # Utility scripts
+├── docs/                   # Documentation
+└── tests/                  # Test files
 ```
 
-#### **🔧 Optional**
-```env
-DEFAULT_LANGUAGE=fa    # Default language (fa/en/ar)
-MAX_SHOPS_PER_USER=3   # Shop limit per user
-SESSION_TIMEOUT=3600   # Session timeout in seconds
-LOG_LEVEL=INFO         # Logging level
+## 🔒 Security Features
+
+### Advanced Security Capabilities
+
+- **Real-time Threat Detection**: AI-powered threat detection
+- **Automated Vulnerability Assessment**: Continuous security scanning
+- **Network Traffic Analysis**: Deep packet inspection
+- **System Hardening**: Automated security hardening
+- **Incident Response**: Automated incident handling
+- **Forensic Analysis**: Digital forensics capabilities
+- **Compliance Monitoring**: Regulatory compliance tracking
+- **Risk Assessment**: Automated risk evaluation
+
+### Performance Optimizations
+
+- **Multi-threading**: Parallel processing for faster scans
+- **Memory Optimization**: Efficient memory usage
+- **CPU Optimization**: Multi-core utilization
+- **Network Optimization**: Optimized network scanning
+- **Storage Optimization**: Efficient data storage
+- **Battery Optimization**: Power-efficient operation
+
+## 📊 Monitoring & Reporting
+
+### Real-time Monitoring
+
+- **System Metrics**: CPU, memory, disk usage
+- **Network Traffic**: Bandwidth, connections, protocols
+- **Security Events**: Threats, vulnerabilities, attacks
+- **Performance Metrics**: Response times, throughput
+- **Anomaly Detection**: Behavioral analysis
+- **Alert System**: Real-time notifications
+
+### Comprehensive Reporting
+
+- **Executive Summary**: High-level security overview
+- **Technical Findings**: Detailed technical analysis
+- **Risk Assessment**: Risk evaluation and scoring
+- **Vulnerability Analysis**: Detailed vulnerability report
+- **Remediation Recommendations**: Actionable security advice
+- **Compliance Assessment**: Regulatory compliance report
+- **Security Metrics**: Quantitative security measures
+- **Future Recommendations**: Strategic security planning
+
+## 🚀 Deployment
+
+### Kali Linux Deployment
+
+```bash
+# Install as system service
+sudo cp kali-security-suite /usr/local/bin/
+sudo chmod +x /usr/local/bin/kali-security-suite
+
+# Create systemd service
+sudo tee /etc/systemd/system/kali-security-suite.service << EOF
+[Unit]
+Description=Kali Security Suite
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/kali-security-suite monitor --daemon
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start service
+sudo systemctl enable kali-security-suite
+sudo systemctl start kali-security-suite
 ```
 
----
+### Docker Deployment
 
-## 🏥 Monitoring
+```bash
+# Build optimized image
+docker build -t kali-security-suite:latest .
 
-### **Health Checks**
-The application provides built-in health monitoring:
+# Run with security privileges
+docker run -d \
+  --name kali-security-suite \
+  --privileged \
+  --network host \
+  -v /var/log:/var/log \
+  -v /etc:/etc \
+  kali-security-suite:latest
+```
 
-- **`GET /health`** - Application health status
-- **`GET /metrics`** - Performance metrics
-- **`GET /`** - Basic status check
+## 🧪 Testing
 
-### **Logging**
-Structured logging with different levels:
-- **INFO**: General information
-- **WARN**: Warning messages  
-- **ERROR**: Error conditions
-- **DEBUG**: Detailed debugging
+### Unit Tests
 
-### **Metrics**
-Built-in metrics collection:
-- User statistics
-- Message processing times
-- Database connection status
-- Memory and CPU usage
+```bash
+# Run unit tests
+go test ./...
 
----
+# Run with coverage
+go test -cover ./...
 
-## 🔐 Security
+# Run specific test
+go test -v ./internal/security
+```
 
-### **Security Features**
-- ✅ **Input Validation**: All user inputs sanitized
-- ✅ **Rate Limiting**: Protection against spam
-- ✅ **Admin Authorization**: Secure admin access
-- ✅ **Environment Variables**: No hardcoded secrets
-- ✅ **Database Security**: Parameterized queries
+### Integration Tests
 
-### **Best Practices**
-- Environment variables for sensitive data
-- Regular token rotation
-- Database connection encryption
-- Proper error handling without data leakage
+```bash
+# Run integration tests
+go test -tags=integration ./...
 
----
+# Run performance tests
+go test -tags=performance ./...
+```
+
+### Security Tests
+
+```bash
+# Run security tests
+go test -tags=security ./...
+
+# Run vulnerability tests
+go test -tags=vulnerability ./...
+```
 
 ## 🤝 Contributing
 
-We welcome contributions! Please read our contributing guidelines:
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
+### Development Setup
 
-### **Development Setup**
 ```bash
-# Clone your fork
-git clone https://github.com/your-username/air.git
-cd air
-git checkout go
+# Fork and clone the repository
+git clone https://github.com/your-username/kali-security-suite.git
+cd kali-security-suite
 
-# Install dependencies
+# Install development dependencies
 go mod download
 
 # Run tests
 go test ./...
 
-# Run with hot reload (requires air)
-go install github.com/cosmtrek/air@latest
-air
+# Build for development
+go build -race -o kali-security-suite-dev
 ```
 
----
-
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
+## 🙏 Acknowledgments
 
-## 🆘 Support
+- **Kali Linux Team**: For the excellent security-focused distribution
+- **Go Community**: For the powerful and efficient language
+- **Security Researchers**: For continuous security research and tools
+- **Open Source Community**: For the collaborative development model
 
-### **Documentation**
-- 📖 [Deployment Guide](LIARA_DEPLOYMENT_GUIDE.md)
-- 🚀 [Getting Started](GO_VERSION_COMPLETE.md)
-- 💡 [Examples and Tutorials](docs/)
+## 📞 Support
 
-### **Community**
-- 🐛 [Report Issues](https://github.com/A4ever-ORG/air/issues)
-- 💡 [Feature Requests](https://github.com/A4ever-ORG/air/discussions)
-- 📧 [Email Support](mailto:support@coderoot.ir)
+- **Documentation**: [Wiki](https://github.com/awesome-project/kali-security-suite/wiki)
+- **Issues**: [GitHub Issues](https://github.com/awesome-project/kali-security-suite/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/awesome-project/kali-security-suite/discussions)
+- **Security**: [Security Policy](SECURITY.md)
 
-### **Professional Support**
-For enterprise support and custom development:
-- 📧 **Email**: enterprise@coderoot.ir
-- 💼 **Consulting**: Available for custom implementations
-- 🏢 **Enterprise**: Volume licensing and support packages
+## 🔄 Version History
 
----
-
-## 🌟 Acknowledgments
-
-- Built with ❤️ using Go
-- Powered by [Liara](https://liara.ir) cloud platform
-- Icons by [Heroicons](https://heroicons.com)
-- Telegram Bot API by [go-telegram-bot-api](https://github.com/go-telegram-bot-api/telegram-bot-api)
+- **v2.0.0**: Advanced security suite with real-time monitoring
+- **v1.5.0**: Enhanced penetration testing capabilities
+- **v1.0.0**: Initial release with basic security features
 
 ---
 
-<div align="center">
+**⚠️ Disclaimer**: This tool is for authorized security testing only. Always ensure you have proper authorization before testing any systems.
 
-### **Ready for Production Deployment! 🚀**
-
-**[Deploy Now on Liara](https://liara.ir)** | **[View Documentation](LIARA_DEPLOYMENT_GUIDE.md)** | **[GitHub Issues](https://github.com/A4ever-ORG/air/issues)**
-
----
-
-**Made with 💪 by CodeRoot Team**
-
-*Enterprise-grade • High-performance • Production-ready*
-
-</div>
-
----
-
-# فارسی
-
-## 🚀 ربات CodeRoot - نسخه Go با کارایی بالا
-
-> **راه‌حل کامل تجارت الکترونیک برای تلگرام**  
-> ساخته شده با Go برای حداکثر کارایی و حداقل مصرف منابع
-
-### ✨ ویژگی‌های کلیدی
-
-- **🏪 مدیریت چند فروشگاه**: ایجاد و مدیریت فروشگاه‌های متعدد
-- **📦 کاتالوگ محصولات**: مدیریت کامل محصولات با تصاویر و قیمت‌گذاری
-- **💳 پردازش سفارشات**: چرخه کامل سفارش از سبد خرید تا تحویل
-- **💰 پرداخت آنلاین**: پشتیبانی از درگاه‌های پرداخت ایرانی
-- **📊 پنل مدیریت**: آنالیتیک جامع و مدیریت کاربران
-
-### 🌍 پشتیبانی چند زبانه
-- **فارسی** - پشتیبانی کامل از راست به چپ
-- **انگلیسی** - بین‌المللی‌سازی کامل  
-- **عربی** - محلی‌سازی کامل
-
-### ⚡ کارایی فوق‌العاده
-- **10-20 برابر سریع‌تر** از جایگزین‌های Python
-- **3-5 برابر کمتر مصرف حافظه**
-- **زمان راه‌اندازی زیر یک ثانیه**
-- **پردازش همزمان** با Goroutines
-- **استقرار تک فایل**
-
-### 🚀 راه‌اندازی سریع
-
-```bash
-# کلون ریپازیتوری
-git clone https://github.com/A4ever-ORG/air.git
-cd air && git checkout go
-
-# تنظیم متغیرهای محیطی
-cp .env.go.example .env
-
-# ساخت و اجرا
-go build -o coderoot-bot && ./coderoot-bot
-```
-
-### 📦 استقرار روی لیارا
-
-```bash
-# نصب CLI لیارا
-npm install -g @liara/cli
-
-# استقرار
-liara deploy
-```
-
-**📖 [راهنمای کامل استقرار](LIARA_DEPLOYMENT_GUIDE.md)**
-
----
-
-<div align="center">
-
-**آماده استقرار تولید! 🎯**
-
-**[مستندات فارسی](LIARA_DEPLOYMENT_GUIDE.md)** | **[پشتیبانی](mailto:support@coderoot.ir)** | **[گزارش مشکل](https://github.com/A4ever-ORG/air/issues)**
-
-</div>
+**🔒 Security**: For security issues, please contact us at security@awesome-project.com
