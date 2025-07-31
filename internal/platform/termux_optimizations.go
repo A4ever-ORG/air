@@ -2,9 +2,7 @@ package platform
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/fatih/color"
 )

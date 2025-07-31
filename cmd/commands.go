@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/awesome-project/go-multi-platform/internal/platform"
 	"github.com/awesome-project/go-multi-platform/internal/features"

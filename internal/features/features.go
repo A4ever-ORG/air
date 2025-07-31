@@ -2,20 +2,16 @@ package features
 
 import (
 	"fmt"
-	"math/rand"
 	"runtime"
 	"time"
 
 	"github.com/awesome-project/go-multi-platform/internal/platform"
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
-	"github.com/gookit/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
-	"os"
 )
 
 func ShowSystemInfo() {
@@ -261,8 +257,6 @@ func ShowTermuxTools() {
 func RunDemo() {
 	cyan := color.New(color.FgCyan, color.Bold)
 	green := color.New(color.FgGreen, color.Bold)
-	yellow := color.New(color.FgYellow, color.Bold)
-	red := color.New(color.FgRed, color.Bold)
 
 	cyan.Println("🎮 Interactive Demo Mode")
 	fmt.Println()
