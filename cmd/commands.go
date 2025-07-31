@@ -95,6 +95,8 @@ var kaliCmd = &cobra.Command{
 	Long:  `Advanced penetration testing and security analysis tools exclusive to Kali Linux.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		features.ShowKaliTools()
+		platform.ShowKaliToolsStatus()
+		platform.ShowKaliAdvancedFeatures()
 	},
 }
 

@@ -173,27 +173,7 @@ func GetInstallationInstructions() string {
 }
 
 func getKaliInstallInstructions() string {
-	return `🔧 Kali Linux Installation:
-
-1. Install Go (if not already installed):
-   sudo apt update
-   sudo apt install golang-go
-
-2. Clone the repository:
-   git clone https://github.com/awesome-project/go-multi-platform.git
-   cd go-multi-platform
-
-3. Build the application:
-   go build -o go-multi-platform
-
-4. Install system-wide:
-   sudo cp go-multi-platform /usr/local/bin/
-   sudo chmod +x /usr/local/bin/go-multi-platform
-
-5. Run the application:
-   go-multi-platform
-
-🎉 Enjoy your Kali Linux optimized experience!`
+	return GetKaliInstallationGuide()
 }
 
 func getTermuxInstallInstructions() string {
