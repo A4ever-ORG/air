@@ -9,7 +9,7 @@ import (
 )
 
 type Monitor struct {
-	logger    logger.Logger
+	logger    *logger.Logger
 	ctx       context.Context
 	cancel    context.CancelFunc
 	metrics   *Metrics
@@ -36,7 +36,7 @@ type MemoryStats struct {
 	HeapSys    uint64
 }
 
-func New(logger logger.Logger) *Monitor {
+func New(logger *logger.Logger) *Monitor {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Monitor{
 		logger:   logger,

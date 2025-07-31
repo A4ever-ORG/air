@@ -5,7 +5,67 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"github.com/redis/go-redis/v9"
 	"coderoot-bot/internal/logger"
+	"coderoot-bot/internal/models"
 )
+
+// UserRepository handles user operations
+type UserRepository struct {
+	collection *mongo.Collection
+	redis      *redis.Client
+	logger     *logger.Logger
+}
+
+func NewUserRepository(db *mongo.Database, redis *redis.Client, logger *logger.Logger) *UserRepository {
+	return &UserRepository{
+		collection: db.Collection("users"),
+		redis:      redis,
+		logger:     logger,
+	}
+}
+
+func (r *UserRepository) CreateIndexes(ctx context.Context) error {
+	return nil
+}
+
+// GetByUserID gets a user by their Telegram user ID
+func (r *UserRepository) GetByUserID(ctx context.Context, userID int64) (*models.User, error) {
+	// TODO: Implement actual database query
+	return nil, nil
+}
+
+// GetByReferralCode gets a user by their referral code
+func (r *UserRepository) GetByReferralCode(ctx context.Context, referralCode string) (*models.User, error) {
+	// TODO: Implement actual database query
+	return nil, nil
+}
+
+// Create creates a new user
+func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
+	// TODO: Implement actual database insert
+	return nil
+}
+
+// Update updates a user
+func (r *UserRepository) Update(ctx context.Context, userID int64, updates map[string]interface{}) error {
+	// TODO: Implement actual database update
+	return nil
+}
+
+// GetUserStats gets user statistics
+func (r *UserRepository) GetUserStats(ctx context.Context) (map[string]interface{}, error) {
+	// TODO: Implement actual statistics query
+	return map[string]interface{}{
+		"total_users": 0,
+		"active_users": 0,
+		"premium_users": 0,
+	}, nil
+}
+
+// UpdateLastActivity updates user's last activity timestamp
+func (r *UserRepository) UpdateLastActivity(ctx context.Context, userID int64) error {
+	// TODO: Implement actual database update
+	return nil
+}
 
 // ShopRepository handles shop operations
 type ShopRepository struct {
