@@ -1,12 +1,12 @@
-# 🚀 CodeRoot Bot - High-Performance Go Edition
+# 🚀 CodeRoot Bot - Liara Optimized Edition
 
-[![Go Version](https://img.shields.io/badge/Go-1.21-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Deployment](https://img.shields.io/badge/Deploy-Liara-purple.svg)](https://liara.ir)
 [![Telegram](https://img.shields.io/badge/Platform-Telegram-blue.svg)](https://telegram.org)
 
 > **Enterprise-grade Telegram bot for creating and managing online stores**  
-> Built with Go for maximum performance and minimal resource usage
+> Built with Go for maximum performance and minimal resource usage on Liara
 
 [English](#english) | [فارسی](#فارسی)
 
@@ -33,32 +33,49 @@
 - **Concurrent processing** with Goroutines
 - **Single binary deployment**
 
+### 🏥 **Advanced Monitoring**
+- **Real-time Health Checks**: `/health` endpoint for Liara monitoring
+- **Performance Metrics**: `/metrics` endpoint with detailed system stats
+- **Memory Optimization**: Efficient garbage collection and memory management
+- **Auto-scaling**: Automatic scaling based on CPU and memory usage
+- **Graceful Shutdown**: Proper cleanup and resource management
+
 ---
 
 ## 🏗️ Architecture
 
 ### **Clean Architecture Design**
 ```
-├── main.go                 # Application entry point
-├── internal/
-│   ├── app/               # Application orchestration
-│   ├── config/            # Configuration management
-│   ├── database/          # Data access layer
-│   │   ├── database.go    # Connection management
-│   │   ├── repositories.go # Data repositories
-│   │   └── user_repository.go # User operations
-│   ├── handlers/          # Telegram message handlers
-│   ├── models/            # Data models
-│   ├── services/          # Business logic
-│   ├── utils/             # Utilities and helpers
-│   └── logger/            # Structured logging
+coderoot-bot/
+├── 📄 main.go              # Entry point with Liara optimizations
+├── 📦 go.mod              # Dependencies
+├── 🐳 Dockerfile.liara    # Container definition
+├── ⚙️ liara.json          # Platform config
+├── 🔧 .env.example        # Environment template
+│
+├── internal/              # Application code
+│   ├── app/              # 🎯 Application layer
+│   ├── config/           # ⚙️ Configuration
+│   ├── database/         # 💾 Data access
+│   ├── handlers/         # 📡 Message handlers
+│   ├── models/           # 📊 Data models
+│   ├── services/         # 💼 Business logic
+│   ├── utils/            # 🔧 Utilities
+│   ├── logger/           # 📋 Logging
+│   ├── monitoring/       # 📊 Real-time monitoring
+│   └── health/           # 🏥 Health checks
+│
+└── docs/                 # 📚 Documentation
+    ├── LIARA_DEPLOYMENT_GUIDE.md
+    └── GO_VERSION_COMPLETE.md
 ```
 
 ### **Technology Stack**
-- **Framework**: Native Go with Gorilla/Gin
+- **Framework**: Native Go with Gin
 - **Database**: MongoDB with connection pooling
 - **Cache**: Redis for session and data caching
 - **Logging**: Structured logging with Zap
+- **Monitoring**: Custom monitoring with health checks
 - **Deployment**: Docker containers on Liara
 
 ---
@@ -70,6 +87,7 @@
 - MongoDB (Atlas recommended)
 - Redis instance
 - Telegram Bot Token
+- Liara account
 
 ### **1. Clone Repository**
 ```bash
@@ -80,18 +98,19 @@ git checkout go
 
 ### **2. Environment Setup**
 ```bash
-cp .env.go.example .env
+cp .env.example .env
 # Edit .env with your configuration
 ```
 
 ### **3. Required Environment Variables**
 ```env
-BOT_TOKEN=your_bot_token_from_botfather
-API_ID=your_telegram_api_id
-API_HASH=your_telegram_api_hash
-ADMIN_USER_ID=your_telegram_user_id
-MONGO_URI=mongodb+srv://...
-REDIS_URL=redis://localhost:6379
+BOT_TOKEN=         # Telegram bot token
+API_ID=            # Telegram API ID
+API_HASH=          # Telegram API hash
+ADMIN_USER_ID=     # Admin Telegram user ID
+MONGO_URI=         # MongoDB connection string
+REDIS_URL=         # Redis connection URL
+ENVIRONMENT=       # production/staging/development
 ```
 
 ### **4. Build and Run**
@@ -151,77 +170,41 @@ docker run -p 8080:8080 --env-file .env coderoot-bot
 
 ---
 
-## 🛠️ Development
+## 🏥 Monitoring & Health Checks
 
-### **Project Structure**
+### **Health Check Endpoints**
+- **`GET /health`** - Application health status with detailed metrics
+- **`GET /metrics`** - Performance metrics and system stats
+- **`GET /status`** - Service status and version info
+- **`GET /`** - Basic information and available endpoints
+
+### **Monitoring Features**
+- **Real-time Metrics**: Memory, CPU, goroutines, requests
+- **Health Monitoring**: Automatic health checks for Liara
+- **Performance Tracking**: Response times and throughput
+- **Error Tracking**: Error rates and logging
+- **Auto-scaling**: Automatic scaling based on metrics
+
+### **Example Health Response**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "uptime": "2h30m15s",
+  "version": "2.0.0",
+  "environment": "production",
+  "memory": {
+    "alloc_mb": 25,
+    "total_alloc_mb": 150,
+    "sys_mb": 45
+  },
+  "runtime": {
+    "goroutines": 15,
+    "cpu_count": 2,
+    "go_version": "go1.21.5"
+  }
+}
 ```
-coderoot-bot/
-├── 📄 main.go              # Entry point
-├── 📦 go.mod              # Dependencies
-├── 🐳 Dockerfile.liara    # Container definition
-├── ⚙️ liara.json          # Platform config
-├── 🔧 .env.go.example     # Environment template
-│
-├── internal/              # Application code
-│   ├── app/              # 🎯 Application layer
-│   ├── config/           # ⚙️ Configuration
-│   ├── database/         # 💾 Data access
-│   ├── handlers/         # 📡 Message handlers
-│   ├── models/           # 📊 Data models
-│   ├── services/         # 💼 Business logic
-│   ├── utils/            # 🔧 Utilities
-│   └── logger/           # 📋 Logging
-│
-└── docs/                 # 📚 Documentation
-    ├── LIARA_DEPLOYMENT_GUIDE.md
-    └── GO_VERSION_COMPLETE.md
-```
-
-### **Key Components**
-
-#### **🎯 Application Layer (`internal/app/`)**
-- Main application orchestration
-- HTTP server with health checks
-- Graceful shutdown handling
-- Service coordination
-
-#### **📡 Handlers (`internal/handlers/`)**
-- Telegram update processing
-- Command routing
-- Callback query handling
-- User interaction management
-
-#### **💾 Database Layer (`internal/database/`)**
-- MongoDB connection pooling
-- Redis caching integration
-- Repository pattern implementation
-- Data access optimization
-
-#### **💼 Services (`internal/services/`)**
-- Business logic implementation
-- User management
-- Shop operations
-- Payment processing
-
----
-
-## 🤖 Bot Commands
-
-### **User Commands**
-| Command | Description |
-|---------|-------------|
-| `/start` | Initialize bot and show main menu |
-| `/help` | Display help information |
-| `/shops` | Manage user stores |
-| `/settings` | User preferences |
-
-### **Admin Commands**
-| Command | Description |
-|---------|-------------|
-| `/admin` | Access admin panel |
-| `/stats` | View bot statistics |
-| `/broadcast` | Send messages to all users |
-| `/backup` | Create data backup |
 
 ---
 
@@ -261,28 +244,94 @@ LOG_LEVEL=INFO         # Logging level
 
 ---
 
-## 🏥 Monitoring
+## 🤖 Bot Commands
 
-### **Health Checks**
-The application provides built-in health monitoring:
+### **User Commands**
+| Command | Description |
+|---------|-------------|
+| `/start` | Initialize bot and show main menu |
+| `/help` | Display help information |
+| `/shops` | Manage user stores |
+| `/settings` | User preferences |
 
-- **`GET /health`** - Application health status
-- **`GET /metrics`** - Performance metrics
-- **`GET /`** - Basic status check
+### **Admin Commands**
+| Command | Description |
+|---------|-------------|
+| `/admin` | Access admin panel |
+| `/stats` | View bot statistics |
+| `/broadcast` | Send messages to all users |
+| `/backup` | Create data backup |
 
-### **Logging**
-Structured logging with different levels:
-- **INFO**: General information
-- **WARN**: Warning messages  
-- **ERROR**: Error conditions
-- **DEBUG**: Detailed debugging
+---
 
-### **Metrics**
-Built-in metrics collection:
-- User statistics
-- Message processing times
-- Database connection status
-- Memory and CPU usage
+## 🛠️ Development
+
+### **Project Structure**
+```
+coderoot-bot/
+├── 📄 main.go              # Entry point
+├── 📦 go.mod              # Dependencies
+├── 🐳 Dockerfile.liara    # Container definition
+├── ⚙️ liara.json          # Platform config
+├── 🔧 .env.example        # Environment template
+│
+├── internal/              # Application code
+│   ├── app/              # 🎯 Application layer
+│   ├── config/           # ⚙️ Configuration
+│   ├── database/         # 💾 Data access
+│   │   ├── database.go    # Connection management
+│   │   ├── repositories.go # Data repositories
+│   │   └── user_repository.go # User operations
+│   ├── handlers/          # 📡 Telegram message handlers
+│   ├── models/            # 📊 Data models
+│   ├── services/          # 💼 Business logic
+│   ├── utils/             # 🔧 Utilities
+│   ├── logger/            # 📋 Logging
+│   ├── monitoring/        # 📊 Real-time monitoring
+│   └── health/            # 🏥 Health checks
+│
+└── docs/                 # 📚 Documentation
+    ├── LIARA_DEPLOYMENT_GUIDE.md
+    └── GO_VERSION_COMPLETE.md
+```
+
+### **Key Components**
+
+#### **🎯 Application Layer (`internal/app/`)**
+- Main application orchestration
+- HTTP server with health checks
+- Graceful shutdown handling
+- Service coordination
+
+#### **📡 Handlers (`internal/handlers/`)**
+- Telegram update processing
+- Command routing
+- Callback query handling
+- User interaction management
+
+#### **💾 Database Layer (`internal/database/`)**
+- MongoDB connection pooling
+- Redis caching integration
+- Repository pattern implementation
+- Data access optimization
+
+#### **💼 Services (`internal/services/`)**
+- Business logic implementation
+- User management
+- Shop operations
+- Payment processing
+
+#### **📊 Monitoring (`internal/monitoring/`)**
+- Real-time metrics collection
+- Performance monitoring
+- Memory and CPU tracking
+- Health check data
+
+#### **🏥 Health (`internal/health/`)**
+- Health check endpoints
+- Metrics collection
+- Status reporting
+- Service monitoring
 
 ---
 
@@ -294,12 +343,17 @@ Built-in metrics collection:
 - ✅ **Admin Authorization**: Secure admin access
 - ✅ **Environment Variables**: No hardcoded secrets
 - ✅ **Database Security**: Parameterized queries
+- ✅ **Non-root Container**: Secure container execution
+- ✅ **Health Checks**: Continuous monitoring
+- ✅ **Graceful Shutdown**: Proper resource cleanup
 
 ### **Best Practices**
 - Environment variables for sensitive data
 - Regular token rotation
 - Database connection encryption
 - Proper error handling without data leakage
+- Container security with non-root user
+- Health monitoring and alerting
 
 ---
 
@@ -386,10 +440,10 @@ For enterprise support and custom development:
 
 # فارسی
 
-## 🚀 ربات CodeRoot - نسخه Go با کارایی بالا
+## 🚀 ربات CodeRoot - نسخه Go بهینه‌سازی شده برای لیارا
 
 > **راه‌حل کامل تجارت الکترونیک برای تلگرام**  
-> ساخته شده با Go برای حداکثر کارایی و حداقل مصرف منابع
+> ساخته شده با Go برای حداکثر کارایی و حداقل مصرف منابع روی لیارا
 
 ### ✨ ویژگی‌های کلیدی
 
@@ -411,6 +465,13 @@ For enterprise support and custom development:
 - **پردازش همزمان** با Goroutines
 - **استقرار تک فایل**
 
+### 🏥 نظارت پیشرفته
+- **بررسی سلامت واقعی**: نقطه پایانی `/health` برای نظارت لیارا
+- **معیارهای عملکرد**: نقطه پایانی `/metrics` با آمار سیستم دقیق
+- **بهینه‌سازی حافظه**: جمع‌آوری زباله کارآمد و مدیریت حافظه
+- **مقیاس‌بندی خودکار**: مقیاس‌بندی خودکار بر اساس استفاده از CPU و حافظه
+- **خاموشی نرم**: پاکسازی مناسب و مدیریت منابع
+
 ### 🚀 راه‌اندازی سریع
 
 ```bash
@@ -419,7 +480,7 @@ git clone https://github.com/A4ever-ORG/air.git
 cd air && git checkout go
 
 # تنظیم متغیرهای محیطی
-cp .env.go.example .env
+cp .env.example .env
 
 # ساخت و اجرا
 go build -o coderoot-bot && ./coderoot-bot

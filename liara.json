@@ -1,0 +1,92 @@
+{
+  "name": "coderoot-bot",
+  "platform": "go",
+  "port": 8080,
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfile": "Dockerfile.liara"
+  },
+  "env": {
+    "ENVIRONMENT": "production",
+    "GOMAXPROCS": "2",
+    "GOGC": "50",
+    "GOMEMLIMIT": "512MiB",
+    "GODEBUG": "http2server=1",
+    "TZ": "UTC",
+    "LANG": "en_US.UTF-8",
+    "GIN_MODE": "release"
+  },
+  "scaling": {
+    "min": 1,
+    "max": 3,
+    "cpu": 0.5,
+    "memory": "512Mi"
+  },
+  "healthcheck": {
+    "path": "/health",
+    "interval": 30,
+    "timeout": 10,
+    "retries": 3,
+    "start_period": 5
+  },
+  "monitoring": {
+    "metrics": {
+      "enabled": true,
+      "path": "/metrics"
+    },
+    "logs": {
+      "enabled": true,
+      "retention": "7d"
+    }
+  },
+  "domains": [
+    "coderoot-bot.liara.run"
+  ],
+  "volumes": [
+    {
+      "name": "logs",
+      "path": "/app/logs",
+      "size": "1Gi"
+    },
+    {
+      "name": "data",
+      "path": "/app/data",
+      "size": "5Gi"
+    }
+  ],
+  "resources": {
+    "cpu": {
+      "request": "0.25",
+      "limit": "0.5"
+    },
+    "memory": {
+      "request": "256Mi",
+      "limit": "512Mi"
+    }
+  },
+  "networking": {
+    "ports": [
+      {
+        "port": 8080,
+        "protocol": "HTTP"
+      }
+    ]
+  },
+  "security": {
+    "non_root": true,
+    "read_only_root": false,
+    "capabilities": []
+  },
+  "deployment": {
+    "strategy": "rolling",
+    "max_surge": 1,
+    "max_unavailable": 0
+  },
+  "autoscaling": {
+    "enabled": true,
+    "cpu_threshold": 70,
+    "memory_threshold": 80,
+    "scale_up_cooldown": 300,
+    "scale_down_cooldown": 600
+  }
+}
