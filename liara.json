@@ -1,19 +1,40 @@
 {
-  "platform": "python",
+  "platform": "docker",
   "app": "coderoot-bot",
-  "port": 8000,
+  "port": 8080,
+  "healthCheck": {
+    "path": "/health",
+    "interval": 30,
+    "timeout": 10,
+    "retries": 3
+  },
   "build": {
-    "location": ".",
-    "commands": [
-      "pip install --upgrade pip",
-      "pip install -r requirements.txt --no-cache-dir"
-    ]
+    "dockerfile": "Dockerfile.liara"
   },
-  "run": {
-    "command": "python bot.py"
-  },
-  "environment": {
-    "PYTHONUNBUFFERED": "1",
-    "PYTHONDONTWRITEBYTECODE": "1"
-  }
+  "envs": [
+    {
+      "name": "PRODUCTION_MODE",
+      "value": "true"
+    },
+    {
+      "name": "SERVER_PORT",
+      "value": "8080"
+    },
+    {
+      "name": "DEFAULT_LANGUAGE",
+      "value": "fa"
+    }
+  ],
+  "volumes": [
+    {
+      "name": "logs",
+      "mountPath": "/app/logs"
+    }
+  ],
+  "disks": [
+    {
+      "name": "logs",
+      "size": 1
+    }
+  ]
 }
