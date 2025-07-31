@@ -1,0 +1,109 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, go, go-kali, go-ter ]
+  pull_request:
+    branches: [ main, go, go-kali, go-ter ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [1.21, 1.22]
+        platform: [linux, windows, darwin]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Run linting
+      run: |
+        go install golang.org/x/lint/golint@latest
+        golint ./...
+
+    - name: Check formatting
+      run: |
+        go install golang.org/x/tools/cmd/goimports@latest
+        test -z "$(goimports -d .)"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        branch: [go, go-kali, go-ter]
+        platform: [linux/amd64, linux/arm64]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Checkout specific branch
+      run: git checkout ${{ matrix.branch }}
+
+    - name: Build for ${{ matrix.platform }}
+      run: |
+        GOOS=linux GOARCH=amd64 go build -o build/${{ matrix.branch }}-linux-amd64 .
+        GOOS=linux GOARCH=arm64 go build -o build/${{ matrix.branch }}-linux-arm64 .
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.branch }}-builds
+        path: build/
+
+  security:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run security scan
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        govulncheck ./...
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        branch: [go, go-kali, go-ter]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Checkout specific branch
+      run: git checkout ${{ matrix.branch }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: |
+        docker build -f Dockerfile.${{ matrix.branch }} -t ${{ matrix.branch }}:latest .
+
+    - name: Test Docker image
+      run: |
+        docker run --rm ${{ matrix.branch }}:latest --help
