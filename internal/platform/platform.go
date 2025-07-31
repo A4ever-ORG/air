@@ -177,32 +177,7 @@ func getKaliInstallInstructions() string {
 }
 
 func getTermuxInstallInstructions() string {
-	return `📱 Termux Installation:
-
-1. Update Termux:
-   pkg update && pkg upgrade
-
-2. Install Go:
-   pkg install golang
-
-3. Clone the repository:
-   git clone https://github.com/awesome-project/go-multi-platform.git
-   cd go-multi-platform
-
-4. Build the application:
-   go build -o go-multi-platform
-
-5. Install locally:
-   cp go-multi-platform ~/.local/bin/
-   chmod +x ~/.local/bin/go-multi-platform
-
-6. Add to PATH (add to ~/.bashrc):
-   export PATH=$PATH:~/.local/bin
-
-7. Run the application:
-   go-multi-platform
-
-🎉 Enjoy your Termux optimized experience!`
+	return GetTermuxInstallationGuide()
 }
 
 func getGenericInstallInstructions() string {

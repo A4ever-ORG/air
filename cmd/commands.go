@@ -106,5 +106,8 @@ var termuxCmd = &cobra.Command{
 	Long:  `Mobile-optimized tools and features designed specifically for Termux on Android.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		features.ShowTermuxTools()
+		platform.ShowTermuxToolsStatus()
+		platform.ShowTermuxAdvancedFeatures()
+		platform.ShowTermuxBatteryOptimization()
 	},
 }
