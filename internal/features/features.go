@@ -33,20 +33,28 @@ func ShowSystemInfo() {
 
 	// CPU Info
 	cpuInfo, err := cpu.Info()
-	if err == nil && len(cpuInfo) > 0 {
+	if err != nil {
+		red.Printf("⚠️  CPU Info: Error retrieving CPU information (%v)\n", err)
+	} else if len(cpuInfo) > 0 {
 		green.Printf("⚡ CPU: %s\n", cpuInfo[0].ModelName)
 		yellow.Printf("🔢 Cores: %d\n", runtime.NumCPU())
 		
-		cpuPercent, _ := cpu.Percent(0, false)
-		if len(cpuPercent) > 0 {
+		cpuPercent, err := cpu.Percent(0, false)
+		if err != nil {
+			red.Printf("⚠️  CPU Usage: Error retrieving CPU usage (%v)\n", err)
+		} else if len(cpuPercent) > 0 {
 			red.Printf("📊 CPU Usage: %.1f%%\n", cpuPercent[0])
 		}
+	} else {
+		red.Printf("⚠️  CPU Info: No CPU information available\n")
 	}
 	fmt.Println()
 
 	// Memory Info
 	memInfo, err := mem.VirtualMemory()
-	if err == nil {
+	if err != nil {
+		red.Printf("⚠️  Memory Info: Error retrieving memory information (%v)\n", err)
+	} else {
 		green.Printf("💾 Total Memory: %.2f GB\n", float64(memInfo.Total)/1024/1024/1024)
 		yellow.Printf("📈 Used Memory: %.2f GB (%.1f%%)\n", 
 			float64(memInfo.Used)/1024/1024/1024, memInfo.UsedPercent)
@@ -56,7 +64,9 @@ func ShowSystemInfo() {
 
 	// Disk Info
 	diskInfo, err := disk.Usage("/")
-	if err == nil {
+	if err != nil {
+		red.Printf("⚠️  Disk Info: Error retrieving disk information (%v)\n", err)
+	} else {
 		green.Printf("💿 Total Disk: %.2f GB\n", float64(diskInfo.Total)/1024/1024/1024)
 		yellow.Printf("📁 Used Disk: %.2f GB (%.1f%%)\n", 
 			float64(diskInfo.Used)/1024/1024/1024, diskInfo.UsedPercent)
@@ -66,7 +76,9 @@ func ShowSystemInfo() {
 
 	// Network Info
 	netInfo, err := net.Interfaces()
-	if err == nil {
+	if err != nil {
+		red.Printf("⚠️  Network Info: Error retrieving network information (%v)\n", err)
+	} else {
 		green.Println("🌐 Network Interfaces:")
 		for _, iface := range netInfo {
 			if len(iface.Addrs) > 0 {

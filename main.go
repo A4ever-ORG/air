@@ -56,7 +56,7 @@ func showBanner() {
 	cyan.Println("║                    🚀 GO MULTI-PLATFORM 🚀                  ║")
 	cyan.Println("║                                                              ║")
 	cyan.Println("║  Advanced Go Application for Kali Linux & Termux            ║")
-	cyan.Println("║  Version:", version, "                                    ║")
+	cyan.Printf("║  Version: %-47s ║\n", version)
 	cyan.Println("╚══════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 
