@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -53,26 +54,40 @@ func New(cfg *config.Config, logger *logger.Logger) (*Database, error) {
 
 // connectMongoDB establishes MongoDB connection
 func (d *Database) connectMongoDB(cfg *config.Config) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	d.logger.Info("🔌 Attempting to connect to MongoDB...")
+	d.logger.Info("📍 MongoDB URI: %s", maskURI(cfg.MongoURI))
 
 	clientOptions := options.Client().ApplyURI(cfg.MongoURI)
 
-	// Configure connection pool
-	clientOptions.SetMaxPoolSize(100)
-	clientOptions.SetMinPoolSize(5)
-	clientOptions.SetMaxConnIdleTime(30 * time.Second)
+	// Configure connection pool for cloud databases
+	clientOptions.SetMaxPoolSize(50)
+	clientOptions.SetMinPoolSize(2)
+	clientOptions.SetMaxConnIdleTime(60 * time.Second)
+	clientOptions.SetServerSelectionTimeout(10 * time.Second)
+	clientOptions.SetConnectTimeout(10 * time.Second)
 
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		d.logger.Error("❌ Failed to connect to MongoDB: %v", err)
+		d.logger.Error("💡 Make sure your MONGO_URI is correct and the database is accessible")
 		return err
 	}
 
-	// Test the connection
-	if err := client.Ping(ctx, nil); err != nil {
-		d.logger.Error("❌ Failed to ping MongoDB: %v", err)
-		return err
+	// Test the connection with retry
+	for i := 0; i < 3; i++ {
+		if err := client.Ping(ctx, nil); err != nil {
+			d.logger.Error("❌ Failed to ping MongoDB (attempt %d/3): %v", i+1, err)
+			if i == 2 {
+				d.logger.Error("💡 Check if your MongoDB service is running and accessible")
+				return err
+			}
+			time.Sleep(2 * time.Second)
+		} else {
+			break
+		}
 	}
 
 	d.MongoDB = client.Database(cfg.DatabaseName)
@@ -83,26 +98,41 @@ func (d *Database) connectMongoDB(cfg *config.Config) error {
 
 // connectRedis establishes Redis connection
 func (d *Database) connectRedis(cfg *config.Config) error {
+	d.logger.Info("🔌 Attempting to connect to Redis...")
+	d.logger.Info("📍 Redis URL: %s", maskURI(cfg.RedisURL))
+
 	opts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
 		d.logger.Error("❌ Failed to parse Redis URL: %v", err)
+		d.logger.Error("💡 Make sure your REDIS_URL is in the correct format")
 		return err
 	}
 
-	// Configure Redis options
-	opts.PoolSize = 10
-	opts.MinIdleConns = 5
-	opts.ConnMaxIdleTime = 30 * time.Second
+	// Configure Redis options for cloud databases
+	opts.PoolSize = 20
+	opts.MinIdleConns = 2
+	opts.ConnMaxIdleTime = 60 * time.Second
+	opts.DialTimeout = 10 * time.Second
+	opts.ReadTimeout = 10 * time.Second
+	opts.WriteTimeout = 10 * time.Second
 
 	d.RedisDB = redis.NewClient(opts)
 
-	// Test the connection
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Test the connection with retry
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := d.RedisDB.Ping(ctx).Err(); err != nil {
-		d.logger.Error("❌ Failed to connect to Redis: %v", err)
-		return err
+	for i := 0; i < 3; i++ {
+		if err := d.RedisDB.Ping(ctx).Err(); err != nil {
+			d.logger.Error("❌ Failed to connect to Redis (attempt %d/3): %v", i+1, err)
+			if i == 2 {
+				d.logger.Error("💡 Check if your Redis service is running and accessible")
+				return err
+			}
+			time.Sleep(2 * time.Second)
+		} else {
+			break
+		}
 	}
 
 	d.logger.Info("✅ Connected to Redis")
@@ -192,4 +222,57 @@ func (d *Database) Close(ctx context.Context) error {
 
 	d.logger.Info("✅ Database connections closed successfully")
 	return nil
+}
+
+// maskURI masks sensitive information in connection strings for logging
+func maskURI(uri string) string {
+	if uri == "" {
+		return "empty"
+	}
+	
+	// For MongoDB URIs
+	if strings.Contains(uri, "mongodb") {
+		// Mask password in MongoDB URI
+		if strings.Contains(uri, "@") {
+			parts := strings.Split(uri, "@")
+			if len(parts) == 2 {
+				authPart := parts[0]
+				hostPart := parts[1]
+				
+				// Mask password if present
+				if strings.Contains(authPart, ":") {
+					authParts := strings.Split(authPart, ":")
+					if len(authParts) >= 3 {
+						// Format: mongodb://username:password@host
+						return authParts[0] + ":***@" + hostPart
+					}
+				}
+			}
+		}
+		return uri
+	}
+	
+	// For Redis URIs
+	if strings.Contains(uri, "redis") {
+		// Mask password in Redis URI
+		if strings.Contains(uri, "@") {
+			parts := strings.Split(uri, "@")
+			if len(parts) == 2 {
+				authPart := parts[0]
+				hostPart := parts[1]
+				
+				// Mask password if present
+				if strings.Contains(authPart, ":") {
+					authParts := strings.Split(authPart, ":")
+					if len(authParts) >= 3 {
+						// Format: redis://username:password@host
+						return authParts[0] + ":***@" + hostPart
+					}
+				}
+			}
+		}
+		return uri
+	}
+	
+	return "***"
 }
